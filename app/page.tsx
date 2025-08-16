@@ -328,6 +328,8 @@ export default function PhotographerPortfolio() {
   const [portfolioAlbums, setPortfolioAlbums] = useState<PortfolioAlbum[]>(defaultAlbums)
   const [siteContentEn, setSiteContentEn] = useState<SiteContent>(defaultContentEn)
   const [siteContentAr, setSiteContentAr] = useState<SiteContent>(defaultContentAr)
+  const [isContentLoaded, setIsContentLoaded] = useState(false)
+  const [isDbContentLoaded, setIsDbContentLoaded] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<ThemeColors>(themeOptions[0])
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [showAdminPanel, setShowAdminPanel] = useState(false)
@@ -347,8 +349,8 @@ export default function PhotographerPortfolio() {
   const [customPrimaryG, setCustomPrimaryG] = useState(119)
   const [customPrimaryB, setCustomPrimaryB] = useState(6)
 
-  // Get current content based on language
-  const siteContent = currentLanguage === "en" ? siteContentEn : siteContentAr
+  // Get current content based on language - only return content if we're ready to show it
+  const siteContent = isContentLoaded ? (currentLanguage === "en" ? siteContentEn : siteContentAr) : null
   const editingContent = currentLanguage === "en" ? editingContentEn : editingContentAr
   const setEditingContent = currentLanguage === "en" ? setEditingContentEn : setEditingContentAr
 
@@ -390,50 +392,44 @@ export default function PhotographerPortfolio() {
         const response = await fetch('/api/site-content')
         if (response.ok) {
           const contentFromDB = await response.json()
-          console.log('Loaded content from database:', contentFromDB)
+          console.log('✅ Database content loaded:', contentFromDB.photographerName, `(${contentFromDB.language})`)
           
-          // Set the content based on language
+          // Set the content based on language and cache it for next time
           if (contentFromDB.language === 'en') {
+            console.log('📝 ✅ Setting & caching English content:', contentFromDB.photographerName)
             setSiteContentEn(contentFromDB)
             setEditingContentEn(contentFromDB)
-            // Clear localStorage to prevent conflicts
-            localStorage.removeItem("siteContentEn")
+            // Cache for instant loading next time
+            localStorage.setItem("cachedDbContentEn", JSON.stringify(contentFromDB))
           } else if (contentFromDB.language === 'ar') {
+            console.log('📝 ✅ Setting & caching Arabic content:', contentFromDB.photographerName)
             setSiteContentAr(contentFromDB)
             setEditingContentAr(contentFromDB)
-            // Clear localStorage to prevent conflicts
-            localStorage.removeItem("siteContentAr")
+            // Cache for instant loading next time
+            localStorage.setItem("cachedDbContentAr", JSON.stringify(contentFromDB))
           }
+          setIsDbContentLoaded(true)
+          
+          // If this is the first load (no cached content), mark as ready now
+          if (!isContentLoaded) {
+            setIsContentLoaded(true)
+            console.log('✅ First load complete - showing real content')
+          }
+          
           return true // Successfully loaded from database
+        } else {
+          console.log('❌ Database content not found (404)')
         }
       } catch (error) {
-        console.error('Failed to load site content from database:', error)
+        console.error('❌ Failed to load site content from database:', error)
       }
       return false // Failed to load from database
     }
 
     const initializeData = async () => {
-      await loadAlbums()
-      const contentLoaded = await loadSiteContent()
+      console.log('🚀 Starting data initialization...')
       
-      // Only load from localStorage if database content wasn't loaded
-      if (!contentLoaded) {
-        const savedContentEn = localStorage.getItem("siteContentEn")
-        const savedContentAr = localStorage.getItem("siteContentAr")
-        
-        if (savedContentEn) {
-          const contentEn = JSON.parse(savedContentEn)
-          setSiteContentEn(contentEn)
-          setEditingContentEn(contentEn)
-        }
-        if (savedContentAr) {
-          const contentAr = JSON.parse(savedContentAr)
-          setSiteContentAr(contentAr)
-          setEditingContentAr(contentAr)
-        }
-      }
-      
-      // Load other settings from localStorage
+      // Load other settings from localStorage first (fast)
       const savedLanguage = localStorage.getItem("currentLanguage") as Language
       const savedTheme = localStorage.getItem("currentTheme")
       
@@ -450,6 +446,36 @@ export default function PhotographerPortfolio() {
           setCustomPrimaryB(parts[2])
         }
       }
+      
+      // Check for cached database content first (INSTANT)
+      const cachedContentEn = localStorage.getItem("cachedDbContentEn")
+      const cachedContentAr = localStorage.getItem("cachedDbContentAr")
+      
+      if (cachedContentEn) {
+        const parsed = JSON.parse(cachedContentEn)
+        console.log('⚡ Using cached English content:', parsed.photographerName)
+        setSiteContentEn(parsed)
+        setEditingContentEn(parsed)
+        setIsDbContentLoaded(true)
+        // Mark as ready since we have cached content
+        setIsContentLoaded(true)
+        console.log('✅ Ready to show cached content')
+      } else {
+        // No cached content - keep loading state for skeleton
+        console.log('⏳ No cached content, showing skeleton until database loads')
+      }
+      
+      if (cachedContentAr) {
+        const parsed = JSON.parse(cachedContentAr)
+        console.log('⚡ Using cached Arabic content:', parsed.photographerName)
+        setSiteContentAr(parsed)
+        setEditingContentAr(parsed)
+      }
+      
+      // Load fresh database content in background to update cache
+      loadAlbums()
+      loadSiteContent()
+      console.log('🔄 Refreshing database content in background...')
     }
 
     initializeData()
@@ -588,8 +614,12 @@ export default function PhotographerPortfolio() {
         
         if (currentLanguage === "en") {
           setSiteContentEn(savedContent)
+          // Update cache immediately
+          localStorage.setItem("cachedDbContentEn", JSON.stringify(savedContent))
         } else {
           setSiteContentAr(savedContent)
+          // Update cache immediately
+          localStorage.setItem("cachedDbContentAr", JSON.stringify(savedContent))
         }
         
         alert("Content saved to database successfully!")
@@ -620,10 +650,20 @@ export default function PhotographerPortfolio() {
     setCustomPrimaryR(217)
     setCustomPrimaryG(119)
     setCustomPrimaryB(6)
+    
+    // Clear all cached data (both old and new cache keys)
     localStorage.removeItem("portfolioAlbums")
-    localStorage.removeItem("siteContentEn")
-    localStorage.removeItem("siteContentAr")
+    localStorage.removeItem("siteContentEn") // old cache
+    localStorage.removeItem("siteContentAr") // old cache
+    localStorage.removeItem("cachedDbContentEn") // new cache
+    localStorage.removeItem("cachedDbContentAr") // new cache
     localStorage.removeItem("currentTheme")
+    
+    // Reset database content loaded flag
+    setIsDbContentLoaded(false)
+    setIsContentLoaded(false) // Force reload
+    
+    console.log('🧹 Cleared all cache and reset to defaults')
     alert("Website reset to default settings!")
   }
 
@@ -737,6 +777,99 @@ export default function PhotographerPortfolio() {
       ...prev,
       images: prev.images.filter(photo => photo.id !== photoId)
     } : null)
+  }
+
+  // Skeleton loader component
+  const SkeletonText = ({ width = "w-full", height = "h-4" }: { width?: string; height?: string }) => (
+    <div className={`${width} ${height} bg-stone-700 animate-pulse rounded`}></div>
+  )
+
+  const SkeletonLoader = () => (
+    <div className={`min-h-screen bg-stone-900 text-stone-100 ${currentLanguage === "ar" ? "rtl" : "ltr"}`}>
+      {/* Navigation Skeleton */}
+      <nav className="fixed top-0 w-full bg-stone-900/95 backdrop-blur-sm border-b border-stone-700 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Camera className="h-6 w-6 text-stone-500" />
+              <SkeletonText width="w-32" height="h-6" />
+            </div>
+            <div className="hidden md:flex space-x-8">
+              <SkeletonText width="w-16" height="h-5" />
+              <SkeletonText width="w-20" height="h-5" />
+              <SkeletonText width="w-16" height="h-5" />
+              <SkeletonText width="w-18" height="h-5" />
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section Skeleton */}
+      <section className="pt-20 pb-16 px-4">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center min-h-[80vh]">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <SkeletonText width="w-24" height="h-6" />
+                <SkeletonText width="w-48" height="h-16" />
+                <div className="space-y-2">
+                  <SkeletonText width="w-full" height="h-4" />
+                  <SkeletonText width="w-4/5" height="h-4" />
+                  <SkeletonText width="w-3/4" height="h-4" />
+                </div>
+              </div>
+              <div className="flex space-x-4">
+                <SkeletonText width="w-32" height="h-12" />
+                <SkeletonText width="w-28" height="h-12" />
+              </div>
+            </div>
+            <div className="relative">
+              <SkeletonText width="w-full" height="h-96" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section Skeleton */}
+      <section className="py-16 bg-stone-800/50">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="text-center space-y-2">
+                <SkeletonText width="w-16 mx-auto" height="h-8" />
+                <SkeletonText width="w-20 mx-auto" height="h-4" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About Section Skeleton */}
+      <section className="py-20 px-4">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <SkeletonText width="w-40" height="h-8" />
+              <div className="space-y-4">
+                <SkeletonText width="w-full" height="h-4" />
+                <SkeletonText width="w-full" height="h-4" />
+                <SkeletonText width="w-4/5" height="h-4" />
+                <SkeletonText width="w-full" height="h-4" />
+                <SkeletonText width="w-3/4" height="h-4" />
+              </div>
+            </div>
+            <div className="relative">
+              <SkeletonText width="w-full" height="h-96" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+
+  // Show skeleton loader if content is not ready yet
+  if (!siteContent) {
+    return <SkeletonLoader />
   }
 
   return (
