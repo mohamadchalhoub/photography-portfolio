@@ -390,13 +390,19 @@ export default function PhotographerPortfolio() {
         const response = await fetch('/api/site-content')
         if (response.ok) {
           const contentFromDB = await response.json()
+          console.log('Loaded content from database:', contentFromDB)
+          
           // Set the content based on language
           if (contentFromDB.language === 'en') {
             setSiteContentEn(contentFromDB)
             setEditingContentEn(contentFromDB)
+            // Clear localStorage to prevent conflicts
+            localStorage.removeItem("siteContentEn")
           } else if (contentFromDB.language === 'ar') {
             setSiteContentAr(contentFromDB)
             setEditingContentAr(contentFromDB)
+            // Clear localStorage to prevent conflicts
+            localStorage.removeItem("siteContentAr")
           }
           return true // Successfully loaded from database
         }
@@ -458,11 +464,10 @@ export default function PhotographerPortfolio() {
   }, [portfolioAlbums])
 
   useEffect(() => {
-    // Save content to localStorage whenever siteContent changes
-    localStorage.setItem("siteContentEn", JSON.stringify(siteContentEn))
-    localStorage.setItem("siteContentAr", JSON.stringify(siteContentAr))
+    // Only save to localStorage if content isn't database-driven
+    // We'll let database be the source of truth for saved content
     localStorage.setItem("currentLanguage", currentLanguage)
-  }, [siteContentEn, siteContentAr, currentLanguage])
+  }, [currentLanguage])
 
   useEffect(() => {
     // Save theme to localStorage and apply CSS variables
