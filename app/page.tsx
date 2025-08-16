@@ -531,16 +531,37 @@ export default function PhotographerPortfolio() {
   }, [])
 
   useEffect(() => {
-    // Load data from localStorage on component mount
-    const savedAlbums = localStorage.getItem("portfolioAlbums")
+    // Load albums from database first, then fallback to localStorage
+    const loadAlbums = async () => {
+      try {
+        const response = await fetch('/api/albums')
+        if (response.ok) {
+          const albumsFromDB = await response.json()
+          if (albumsFromDB.length > 0) {
+            setPortfolioAlbums(albumsFromDB)
+            return // Don't load from localStorage if we have database data
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load albums from database:', error)
+      }
+
+      // Fallback to localStorage only if no database albums
+      const savedAlbums = localStorage.getItem("portfolioAlbums")
+      if (savedAlbums) {
+        setPortfolioAlbums(JSON.parse(savedAlbums))
+      }
+    }
+
+    loadAlbums()
+
+    // Load other data from localStorage
     const savedContentEn = localStorage.getItem("siteContentEn")
     const savedContentAr = localStorage.getItem("siteContentAr")
     const savedLanguage = localStorage.getItem("currentLanguage") as Language
     const savedTheme = localStorage.getItem("currentTheme")
 
-    if (savedAlbums) {
-      setPortfolioAlbums(JSON.parse(savedAlbums))
-    }
+    // Don't set portfolioAlbums here since we handle it above
     if (savedContentEn) {
       const contentEn = JSON.parse(savedContentEn)
       setSiteContentEn(contentEn)
@@ -639,12 +660,30 @@ export default function PhotographerPortfolio() {
     setMobileMenuOpen(false) // Close the mobile menu after clicking a link
   }
 
-  const handleAdminLogin = () => {
-    if (adminPassword === "admin123") {
-      setIsAdminAuthenticated(true)
-      setAdminPassword("")
-    } else {
-      alert("Incorrect password")
+  const handleAdminLogin = async () => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: 'admin',
+          password: adminPassword,
+        }),
+      })
+
+      if (response.ok) {
+        setIsAdminAuthenticated(true)
+        setAdminPassword("")
+        alert("Login successful!")
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || "Login failed")
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      alert("Login failed - please try again")
     }
   }
 
@@ -717,21 +756,50 @@ export default function PhotographerPortfolio() {
     }
   }
 
-  const handleSaveAlbum = () => {
+  const handleSaveAlbum = async () => {
     if (!editingAlbum) return
 
-    if (isCreatingNewAlbum) {
-      setPortfolioAlbums(prev => [...prev, editingAlbum])
-    } else {
-      setPortfolioAlbums(prev => prev.map(album => 
-        album.id === editingAlbum.id ? editingAlbum : album
-      ))
-    }
+    try {
+      if (isCreatingNewAlbum) {
+        // Create new album in database
+        const response = await fetch('/api/albums', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: editingAlbum.title,
+            description: editingAlbum.description,
+            coverImage: editingAlbum.coverImage,
+            location: editingAlbum.location,
+            year: editingAlbum.year,
+            aspectRatio: editingAlbum.aspectRatio,
+            images: editingAlbum.images,
+          }),
+        })
 
-    setShowAlbumModal(false)
-    setEditingAlbum(null)
-    setIsCreatingNewAlbum(false)
-    alert(`Album ${isCreatingNewAlbum ? 'created' : 'updated'} successfully!`)
+        if (response.ok) {
+          const newAlbum = await response.json()
+          setPortfolioAlbums(prev => [...prev, newAlbum])
+          alert("Album created and saved to database!")
+        } else {
+          throw new Error("Failed to create album")
+        }
+      } else {
+        // Update existing album locally for now
+        setPortfolioAlbums(prev => prev.map(album => 
+          album.id === editingAlbum.id ? editingAlbum : album
+        ))
+        alert("Album updated locally!")
+      }
+
+      setShowAlbumModal(false)
+      setEditingAlbum(null)
+      setIsCreatingNewAlbum(false)
+    } catch (error) {
+      console.error('Error saving album:', error)
+      alert("Failed to save album. Please try again.")
+    }
   }
 
   const handleAlbumImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'coverImage' | 'newPhoto') => {
@@ -1204,7 +1272,7 @@ export default function PhotographerPortfolio() {
                   >
                     Login
                   </Button>
-                  <p className="text-sm text-stone-400 text-center">Default password: admin123</p>
+                  <p className="text-sm text-stone-400 text-center">Username: admin | Password: password</p>
                 </div>
               </div>
             ) : (

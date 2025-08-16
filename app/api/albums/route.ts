@@ -1,51 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db, albums, images } from '@/lib/db'
-import { eq, desc } from 'drizzle-orm'
+import { createClient } from '@supabase/supabase-js'
 
 export async function GET() {
   try {
-    // Get all albums with their images
-    const albumsWithImages = await db
-      .select()
-      .from(albums)
-      .leftJoin(images, eq(albums.id, images.albumId))
-      .orderBy(desc(albums.createdAt))
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
-    // Group images by album
-    const albumsMap = new Map()
-    
-    albumsWithImages.forEach((row) => {
-      const album = row.albums
-      const image = row.images
-      
-      if (!albumsMap.has(album.id)) {
-        albumsMap.set(album.id, {
-          id: album.slug, // Use slug as frontend ID for compatibility
-          title: album.title,
-          description: album.description,
-          coverImage: album.coverImage,
-          location: album.location,
-          year: album.year,
-          aspectRatio: album.aspectRatio,
-          images: []
-        })
-      }
-      
-      if (image) {
-        albumsMap.get(album.id).images.push({
-          id: image.id.toString(),
-          src: image.src,
-          alt: image.alt,
-          title: image.title,
-          location: image.location,
-          aspectRatio: image.aspectRatio
-        })
-      }
-    })
+    // Get albums with images using Supabase client
+    const { data: albumsData, error: albumsError } = await supabase
+      .from('albums')
+      .select(`
+        *,
+        images (*)
+      `)
+      .order('created_at', { ascending: false })
 
-    const albumsList = Array.from(albumsMap.values())
+    if (albumsError) {
+      console.error('Error fetching albums:', albumsError)
+      return NextResponse.json(
+        { error: 'Failed to fetch albums' },
+        { status: 500 }
+      )
+    }
+
+    // Convert to frontend format
+    const formattedAlbums = albumsData.map(album => ({
+      id: album.slug,
+      title: album.title,
+      description: album.description,
+      coverImage: album.cover_image,
+      location: album.location,
+      year: album.year,
+      aspectRatio: album.aspect_ratio,
+      images: album.images?.map(image => ({
+        id: image.id.toString(),
+        src: image.src,
+        alt: image.alt,
+        title: image.title,
+        location: image.location,
+        aspectRatio: image.aspect_ratio
+      })) || []
+    }))
     
-    return NextResponse.json(albumsList)
+    return NextResponse.json(formattedAlbums)
   } catch (error) {
     console.error('Error fetching albums:', error)
     return NextResponse.json(
@@ -57,49 +56,70 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
     const body = await request.json()
     const { title, description, coverImage, location, year, aspectRatio, images: albumImages } = body
 
     // Generate slug from title
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     
-    // Insert album
-    const [newAlbum] = await db
-      .insert(albums)
-      .values({
+    // Insert album using Supabase client
+    const { data: newAlbum, error: albumError } = await supabase
+      .from('albums')
+      .insert({
         slug,
         title,
         description,
-        coverImage,
+        cover_image: coverImage,
         location,
         year,
-        aspectRatio: aspectRatio || '3/2',
+        aspect_ratio: aspectRatio || '3/2',
       })
-      .returning()
+      .select()
+      .single()
+
+    if (albumError) {
+      console.error('Error creating album:', albumError)
+      return NextResponse.json(
+        { error: 'Failed to create album' },
+        { status: 500 }
+      )
+    }
 
     // Insert images if provided
     if (albumImages && albumImages.length > 0) {
       const imageData = albumImages.map((img: any, index: number) => ({
-        albumId: newAlbum.id,
+        album_id: newAlbum.id,
         src: img.src,
         alt: img.alt,
         title: img.title,
         location: img.location,
-        aspectRatio: img.aspectRatio || '3/2',
+        aspect_ratio: img.aspectRatio || '3/2',
         order: index,
       }))
 
-      await db.insert(images).values(imageData)
+      const { error: imagesError } = await supabase
+        .from('images')
+        .insert(imageData)
+
+      if (imagesError) {
+        console.error('Error creating images:', imagesError)
+        // Album was created but images failed - you might want to handle this
+      }
     }
 
     return NextResponse.json({
       id: newAlbum.slug,
       title: newAlbum.title,
       description: newAlbum.description,
-      coverImage: newAlbum.coverImage,
+      coverImage: newAlbum.cover_image,
       location: newAlbum.location,
       year: newAlbum.year,
-      aspectRatio: newAlbum.aspectRatio,
+      aspectRatio: newAlbum.aspect_ratio,
       images: albumImages || []
     })
   } catch (error) {

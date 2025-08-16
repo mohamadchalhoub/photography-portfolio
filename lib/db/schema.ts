@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, varchar } from 'drizzle-orm/pg-core'
+import { pgTable, text, serial, timestamp, jsonb, varchar, integer } from 'drizzle-orm/pg-core'
 
 // Albums table
 export const albums = pgTable('albums', {
@@ -17,13 +17,13 @@ export const albums = pgTable('albums', {
 // Images table
 export const images = pgTable('images', {
   id: serial('id').primaryKey(),
-  albumId: serial('album_id').references(() => albums.id, { onDelete: 'cascade' }).notNull(),
+  albumId: integer('album_id').references(() => albums.id, { onDelete: 'cascade' }).notNull(),
   src: text('src').notNull(),
   alt: text('alt').notNull(),
   title: varchar('title', { length: 255 }).notNull(),
   location: varchar('location', { length: 255 }).notNull(),
   aspectRatio: varchar('aspect_ratio', { length: 50 }).notNull().default('3/2'),
-  order: serial('order').notNull().default(0),
+  order: integer('order').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 

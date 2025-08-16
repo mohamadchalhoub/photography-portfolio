@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db, adminUsers } from '@/lib/db'
-import { eq } from 'drizzle-orm'
+import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
@@ -17,21 +16,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user by username
-    const [user] = await db
-      .select()
-      .from(adminUsers)
-      .where(eq(adminUsers.username, username))
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
-    if (!user) {
+    // Find user by username
+    const { data: users, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('username', username)
+      .limit(1)
+
+    if (error || !users || users.length === 0) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
 
+    const user = users[0]
+
     // Check password
-    const isValidPassword = await bcrypt.compare(password, user.passwordHash)
+    const isValidPassword = await bcrypt.compare(password, user.password_hash)
 
     if (!isValidPassword) {
       return NextResponse.json(
