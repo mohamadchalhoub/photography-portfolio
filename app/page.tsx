@@ -690,9 +690,27 @@ export default function PhotographerPortfolio() {
     setShowAlbumModal(true)
   }
 
-  const handleDeleteAlbum = (albumId: string) => {
+  const handleDeleteAlbum = async (albumId: string) => {
     if (confirm("Are you sure you want to delete this album? This action cannot be undone.")) {
-      setPortfolioAlbums(prev => prev.filter(album => album.id !== albumId))
+      try {
+        // Delete from database first
+        const response = await fetch(`/api/albums/${albumId}`, {
+          method: 'DELETE',
+        })
+
+        if (response.ok) {
+          // Remove from local state only if database deletion succeeded
+          setPortfolioAlbums(prev => prev.filter(album => album.id !== albumId))
+          alert("Album deleted successfully!")
+          console.log('✅ Album deleted from database:', albumId)
+        } else {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to delete album")
+        }
+      } catch (error) {
+        console.error('Error deleting album:', error)
+        alert("Failed to delete album from database. Please try again.")
+      }
     }
   }
 
