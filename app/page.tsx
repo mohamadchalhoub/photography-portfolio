@@ -146,215 +146,46 @@ const getHoverColor = (rgb: string): string => {
 
 export default function PhotographerPortfolio() {
   const defaultAlbums: PortfolioAlbum[] = [
-    {
-      id: "voices-of-conflict",
-      title: "Voices of Conflict",
-      description: "Documentary photography from conflict zones across Eastern Europe",
-      coverImage: "/placeholder.svg?height=400&width=600",
-      location: "Eastern Europe",
-      year: "2023",
-      aspectRatio: "3/2",
-      images: [
-        {
-          id: "1",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Documentary photography from conflict zone",
-          title: "Voices of Conflict 1",
-          location: "Eastern Europe, 2023",
-          aspectRatio: "3/2",
-        },
-        {
-          id: "2",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Local residents during conflict",
-          title: "Voices of Conflict 2",
-          location: "Eastern Europe, 2023",
-          aspectRatio: "3/2",
-        },
-        {
-          id: "3",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Community resilience in wartime",
-          title: "Voices of Conflict 3",
-          location: "Eastern Europe, 2023",
-          aspectRatio: "3/2",
-        },
-      ],
-    },
-    {
-      id: "hope-in-crisis",
-      title: "Hope in Crisis",
-      description: "Humanitarian efforts and refugee assistance across the Mediterranean",
-      coverImage: "/placeholder.svg?height=400&width=600",
-      location: "Mediterranean",
-      year: "2023",
-      aspectRatio: "3/2",
-      images: [
-        {
-          id: "4",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Humanitarian workers assisting refugees",
-          title: "Hope in Crisis 1",
-          location: "Mediterranean, 2023",
-          aspectRatio: "3/2",
-        },
-        {
-          id: "5",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Rescue operations at sea",
-          title: "Hope in Crisis 2",
-          location: "Mediterranean, 2023",
-          aspectRatio: "3/2",
-        },
-      ],
-    },
-    {
-      id: "displaced-dreams",
-      title: "Displaced Dreams",
-      description: "Stories of families forced to leave their homes",
-      coverImage: "/placeholder.svg?height=400&width=600",
-      location: "Middle East",
-      year: "2022",
-      aspectRatio: "3/2",
-      images: [
-        {
-          id: "6",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Displaced families in temporary shelter",
-          title: "Displaced Dreams 1",
-          location: "Middle East, 2022",
-          aspectRatio: "3/2",
-        },
-        {
-          id: "7",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Children in refugee camps",
-          title: "Displaced Dreams 2",
-          location: "Middle East, 2022",
-          aspectRatio: "3/2",
-        },
-      ],
-    },
-    {
-      id: "healing-hands",
-      title: "Healing Hands",
-      description: "Medical assistance and healthcare in conflict areas",
-      coverImage: "/placeholder.svg?height=400&width=600",
-      location: "Africa",
-      year: "2022",
-      aspectRatio: "3/2",
-      images: [
-        {
-          id: "8",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Medical assistance in conflict area",
-          title: "Healing Hands 1",
-          location: "Africa, 2022",
-          aspectRatio: "3/2",
-        },
-        {
-          id: "9",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Healthcare workers in the field",
-          title: "Healing Hands 2",
-          location: "Africa, 2022",
-          aspectRatio: "3/2",
-        },
-      ],
-    },
-    {
-      id: "resilient-spirits",
-      title: "Resilient Spirits",
-      description: "Children finding joy and hope amid adversity",
-      coverImage: "/placeholder.svg?height=400&width=600",
-      location: "South America",
-      year: "2023",
-      aspectRatio: "3/2",
-      images: [
-        {
-          id: "10",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Children finding joy amid adversity",
-          title: "Resilient Spirits 1",
-          location: "South America, 2023",
-          aspectRatio: "3/2",
-        },
-        {
-          id: "11",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Young faces of hope",
-          title: "Resilient Spirits 2",
-          location: "South America, 2023",
-          aspectRatio: "3/2",
-        },
-      ],
-    },
-    {
-      id: "guardians-of-peace",
-      title: "Guardians of Peace",
-      description: "Peacekeeping forces working to maintain stability",
-      coverImage: "/placeholder.svg?height=400&width=600",
-      location: "Central Africa",
-      year: "2022",
-      aspectRatio: "3/2",
-      images: [
-        {
-          id: "12",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Peacekeeping forces on patrol",
-          title: "Guardians of Peace 1",
-          location: "Central Africa, 2022",
-          aspectRatio: "3/2",
-        },
-        {
-          id: "13",
-          src: "/placeholder.svg?height=400&width=600",
-          alt: "Peace negotiations in progress",
-          title: "Guardians of Peace 2",
-          location: "Central Africa, 2022",
-          aspectRatio: "3/2",
-        },
-      ],
-    },
+    // No default albums - load from database or allow user to create new ones
   ]
 
   const defaultContentEn: SiteContent = {
-    photographerName: "Alex Morgan",
-    heroTitle: "Documenting",
-    heroSubtitle: "Humanity",
+    photographerName: "Your Name",
+    heroTitle: "Your",
+    heroSubtitle: "Photography",
     heroDescription:
-      "Through the lens of conflict and compassion, I capture the untold stories of resilience, hope, and the human spirit in the world's most challenging environments.",
+      "Tell your story here. Edit this content in the admin dashboard to personalize your portfolio.",
     heroImage: "/placeholder.svg?height=800&width=640",
-    heroImageAspectRatio: "4/5", // Default aspect ratio for hero image
-    experienceYears: "15+",
+    heroImageAspectRatio: "4/5",
+    experienceYears: "0+",
 
     aboutTitle: "About My Work",
     aboutDescription: [
-      "For over fifteen years, I have dedicated my life to documenting the human condition in some of the world's most challenging environments. My work focuses on conflict zones, humanitarian crises, and the remarkable resilience of people facing adversity.",
-      "Through my lens, I strive to give voice to the voiceless and bring attention to stories that might otherwise go untold. Each photograph is a testament to the strength, dignity, and hope that persists even in the darkest of times.",
-      "My work has been featured in major publications worldwide and has contributed to raising awareness for humanitarian causes across the globe.",
+      "This is your about section. Edit this content in the admin dashboard to tell your unique story.",
+      "You can have multiple paragraphs to describe your journey, vision, and photographic style.",
+      "Use the admin panel to customize all content to reflect your personal brand and message.",
     ],
     stats: {
-      countries: "50+",
-      publications: "200+",
-      awards: "15",
+      countries: "0",
+      publications: "0",
+      awards: "0",
     },
     aboutImage: "/placeholder.svg?height=800&width=640",
-    aboutImageAspectRatio: "4/5", // Default aspect ratio for about image
+    aboutImageAspectRatio: "4/5",
 
     contactTitle: "Let's Work Together",
     contactDescription:
-      "Available for assignments, exhibitions, and collaborations. Let's discuss how we can tell important stories together.",
-    email: "alex@alexmorgan.photo",
-    phone: "+1 (555) 123-4567",
-    location: "New York, NY",
+      "Edit your contact information and message in the admin dashboard.",
+    email: "your.email@example.com",
+    phone: "+1 (000) 000-0000",
+    location: "Your City, Your Country",
 
     instagramUrl: "#",
     twitterUrl: "#",
 
     portfolioTitle: "Portfolio",
     portfolioDescription:
-      "A collection of stories from the frontlines of human experience, documenting both the darkness and light of our shared humanity.",
+      "Your portfolio description goes here. Customize it in the admin dashboard.",
 
     navHome: "Home",
     navPortfolio: "Portfolio",
@@ -375,14 +206,14 @@ export default function PhotographerPortfolio() {
   }
 
   const defaultContentAr: SiteContent = {
-    photographerName: "أليكس مورغان",
-    heroTitle: "توثيق",
-    heroSubtitle: "الإنسانية",
+    photographerName: "اسمك هنا",
+    heroTitle: "التصوير",
+    heroSubtitle: "الفوتوغرافي",
     heroDescription:
-      "من خلال عدسة الصراع والرحمة، أسعى لتوثيق القصص غير المروية للمرونة والأمل والروح الإنسانية في أصعب البيئات في العالم.",
+      "أخبر قصتك هنا. قم بتحرير هذا المحتوى في لوحة الإدارة لتخصيص معرضك الشخصي.",
     heroImage: "/placeholder.svg?height=800&width=640",
     heroImageAspectRatio: "4/5",
-    experienceYears: "15+",
+    experienceYears: "0+",
 
     aboutTitle: "عن عملي",
     aboutDescription: [
@@ -391,16 +222,16 @@ export default function PhotographerPortfolio() {
       "تم عرض أعمالي في منشورات رئيسية حول العالم وساهمت في زيادة الوعي بالقضايا الإنسانية عبر الكرة الأرضية.",
     ],
     stats: {
-      countries: "50+",
-      publications: "200+",
-      awards: "15",
+      countries: "0",
+      publications: "0",
+      awards: "0",
     },
     aboutImage: "/placeholder.svg?height=800&width=640",
     aboutImageAspectRatio: "4/5",
 
     contactTitle: "لنعمل معًا",
     contactDescription: "متاح للمهام والمعارض والتعاون. دعونا نناقش كيف يمكننا سرد القصص المهمة معًا.",
-    email: "alex@alexmorgan.photo",
+    email: "your.email@example.com",
     phone: "+1 (555) 123-4567",
     location: "نيويورك، نيويورك",
 
@@ -553,38 +384,69 @@ export default function PhotographerPortfolio() {
       }
     }
 
-    loadAlbums()
+    // Load site content from database first, then fallback to localStorage
+    const loadSiteContent = async () => {
+      try {
+        const response = await fetch('/api/site-content')
+        if (response.ok) {
+          const contentFromDB = await response.json()
+          // Set the content based on language
+          if (contentFromDB.language === 'en') {
+            setSiteContentEn(contentFromDB)
+            setEditingContentEn(contentFromDB)
+          } else if (contentFromDB.language === 'ar') {
+            setSiteContentAr(contentFromDB)
+            setEditingContentAr(contentFromDB)
+          }
+          return true // Successfully loaded from database
+        }
+      } catch (error) {
+        console.error('Failed to load site content from database:', error)
+      }
+      return false // Failed to load from database
+    }
 
-    // Load other data from localStorage
-    const savedContentEn = localStorage.getItem("siteContentEn")
-    const savedContentAr = localStorage.getItem("siteContentAr")
-    const savedLanguage = localStorage.getItem("currentLanguage") as Language
-    const savedTheme = localStorage.getItem("currentTheme")
-
-    // Don't set portfolioAlbums here since we handle it above
-    if (savedContentEn) {
-      const contentEn = JSON.parse(savedContentEn)
-      setSiteContentEn(contentEn)
-      setEditingContentEn(contentEn)
-    }
-    if (savedContentAr) {
-      const contentAr = JSON.parse(savedContentAr)
-      setSiteContentAr(contentAr)
-      setEditingContentAr(contentAr)
-    }
-    if (savedLanguage) {
-      setCurrentLanguage(savedLanguage)
-    }
-    if (savedTheme) {
-      const loadedTheme: ThemeColors = JSON.parse(savedTheme)
-      setCurrentTheme(loadedTheme)
-      const parts = loadedTheme.primary.match(/\d+/g)?.map(Number)
-      if (parts && parts.length === 3) {
-        setCustomPrimaryR(parts[0])
-        setCustomPrimaryG(parts[1])
-        setCustomPrimaryB(parts[2])
+    const initializeData = async () => {
+      await loadAlbums()
+      const contentLoaded = await loadSiteContent()
+      
+      // Only load from localStorage if database content wasn't loaded
+      if (!contentLoaded) {
+        const savedContentEn = localStorage.getItem("siteContentEn")
+        const savedContentAr = localStorage.getItem("siteContentAr")
+        
+        if (savedContentEn) {
+          const contentEn = JSON.parse(savedContentEn)
+          setSiteContentEn(contentEn)
+          setEditingContentEn(contentEn)
+        }
+        if (savedContentAr) {
+          const contentAr = JSON.parse(savedContentAr)
+          setSiteContentAr(contentAr)
+          setEditingContentAr(contentAr)
+        }
+      }
+      
+      // Load other settings from localStorage
+      const savedLanguage = localStorage.getItem("currentLanguage") as Language
+      const savedTheme = localStorage.getItem("currentTheme")
+      
+      if (savedLanguage) {
+        setCurrentLanguage(savedLanguage)
+      }
+      if (savedTheme) {
+        const loadedTheme: ThemeColors = JSON.parse(savedTheme)
+        setCurrentTheme(loadedTheme)
+        const parts = loadedTheme.primary.match(/\d+/g)?.map(Number)
+        if (parts && parts.length === 3) {
+          setCustomPrimaryR(parts[0])
+          setCustomPrimaryG(parts[1])
+          setCustomPrimaryB(parts[2])
+        }
       }
     }
+
+    initializeData()
   }, [])
 
   useEffect(() => {
@@ -701,13 +563,46 @@ export default function PhotographerPortfolio() {
     }
   }
 
-  const saveContentChanges = () => {
-    if (currentLanguage === "en") {
-      setSiteContentEn(editingContentEn)
-    } else {
-      setSiteContentAr(editingContentAr)
+  const saveContentChanges = async () => {
+    try {
+      const contentToSave = currentLanguage === "en" ? editingContentEn : editingContentAr
+      
+      const response = await fetch('/api/site-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...contentToSave,
+          language: currentLanguage,
+        }),
+      })
+
+      if (response.ok) {
+        const savedContent = await response.json()
+        
+        if (currentLanguage === "en") {
+          setSiteContentEn(savedContent)
+        } else {
+          setSiteContentAr(savedContent)
+        }
+        
+        alert("Content saved to database successfully!")
+      } else {
+        throw new Error("Failed to save content")
+      }
+    } catch (error) {
+      console.error('Error saving content:', error)
+      
+      // Fallback to local storage update
+      if (currentLanguage === "en") {
+        setSiteContentEn(editingContentEn)
+      } else {
+        setSiteContentAr(editingContentAr)
+      }
+      
+      alert("Content updated locally (database save failed)")
     }
-    alert("Content updated successfully!")
   }
 
   const resetToDefault = () => {
