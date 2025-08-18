@@ -386,10 +386,17 @@ export default function PhotographerPortfolio() {
       }
     }
 
-    // Load site content from database first, then fallback to localStorage
+    // Load site content from database with better error handling
     const loadSiteContent = async () => {
       try {
-        const response = await fetch('/api/site-content')
+        console.log('🔄 Attempting to load content from database...')
+        const response = await fetch('/api/site-content', {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        })
+        
         if (response.ok) {
           const contentFromDB = await response.json()
           console.log('✅ Database content loaded:', contentFromDB.photographerName, `(${contentFromDB.language})`)
@@ -401,12 +408,14 @@ export default function PhotographerPortfolio() {
             setEditingContentEn(contentFromDB)
             // Cache for instant loading next time
             localStorage.setItem("cachedDbContentEn", JSON.stringify(contentFromDB))
+            localStorage.setItem("cachedDbContentEn_timestamp", Date.now().toString())
           } else if (contentFromDB.language === 'ar') {
             console.log('📝 ✅ Setting & caching Arabic content:', contentFromDB.photographerName)
             setSiteContentAr(contentFromDB)
             setEditingContentAr(contentFromDB)
             // Cache for instant loading next time
             localStorage.setItem("cachedDbContentAr", JSON.stringify(contentFromDB))
+            localStorage.setItem("cachedDbContentAr_timestamp", Date.now().toString())
           }
           setIsDbContentLoaded(true)
           
@@ -418,12 +427,16 @@ export default function PhotographerPortfolio() {
           
           return true // Successfully loaded from database
         } else {
-          console.log('❌ Database content not found (404)')
+          console.log('❌ Database content not found (404) - Using cached content if available')
+          // Don't overwrite existing content with defaults on API failure
+          return false
         }
       } catch (error) {
-        console.error('❌ Failed to load site content from database:', error)
+        console.error('❌ CRITICAL: Failed to load site content from database:', error)
+        console.log('🛡️ PROTECTION: Keeping existing content, not reverting to defaults')
+        // DON'T revert to defaults - keep whatever content we have
+        return false
       }
-      return false // Failed to load from database
     }
 
     const initializeData = async () => {
@@ -447,29 +460,65 @@ export default function PhotographerPortfolio() {
         }
       }
       
-      // Check for cached database content first (INSTANT)
+      // Check for cached database content first (INSTANT) - with validation
       const cachedContentEn = localStorage.getItem("cachedDbContentEn")
       const cachedContentAr = localStorage.getItem("cachedDbContentAr")
+      const cacheTimestampEn = localStorage.getItem("cachedDbContentEn_timestamp")
+      const cacheTimestampAr = localStorage.getItem("cachedDbContentAr_timestamp")
       
-      if (cachedContentEn) {
-        const parsed = JSON.parse(cachedContentEn)
-        console.log('⚡ Using cached English content:', parsed.photographerName)
-        setSiteContentEn(parsed)
-        setEditingContentEn(parsed)
-        setIsDbContentLoaded(true)
-        // Mark as ready since we have cached content
-        setIsContentLoaded(true)
-        console.log('✅ Ready to show cached content')
-      } else {
-        // No cached content - keep loading state for skeleton
-        console.log('⏳ No cached content, showing skeleton until database loads')
+      // Validate cache is not too old (24 hours max)
+      const isCacheValid = (timestamp: string | null) => {
+        if (!timestamp) return false
+        const cacheAge = Date.now() - parseInt(timestamp)
+        const maxAge = 24 * 60 * 60 * 1000 // 24 hours
+        return cacheAge < maxAge
       }
       
-      if (cachedContentAr) {
-        const parsed = JSON.parse(cachedContentAr)
-        console.log('⚡ Using cached Arabic content:', parsed.photographerName)
-        setSiteContentAr(parsed)
-        setEditingContentAr(parsed)
+      if (cachedContentEn && isCacheValid(cacheTimestampEn)) {
+        try {
+          const parsed = JSON.parse(cachedContentEn)
+          // Additional validation - make sure it's real content, not defaults
+          if (parsed.photographerName && parsed.photographerName !== "Your Name") {
+            console.log('⚡ Using cached English content:', parsed.photographerName)
+            setSiteContentEn(parsed)
+            setEditingContentEn(parsed)
+            setIsDbContentLoaded(true)
+            setIsContentLoaded(true)
+            console.log('✅ Ready to show cached content')
+          } else {
+            console.log('🗑️ Cached content appears to be defaults - clearing cache')
+            localStorage.removeItem("cachedDbContentEn")
+            localStorage.removeItem("cachedDbContentEn_timestamp")
+          }
+        } catch (error) {
+          console.log('🗑️ Invalid cached content - clearing cache')
+          localStorage.removeItem("cachedDbContentEn")
+          localStorage.removeItem("cachedDbContentEn_timestamp")
+        }
+      } else {
+        console.log('⏳ No valid cached content, showing skeleton until database loads')
+        if (cachedContentEn && !isCacheValid(cacheTimestampEn)) {
+          console.log('🗑️ Cache expired - clearing old cache')
+          localStorage.removeItem("cachedDbContentEn")
+          localStorage.removeItem("cachedDbContentEn_timestamp")
+        }
+      }
+      
+      if (cachedContentAr && isCacheValid(cacheTimestampAr)) {
+        try {
+          const parsed = JSON.parse(cachedContentAr)
+          if (parsed.photographerName && parsed.photographerName !== "اسمك هنا") {
+            console.log('⚡ Using cached Arabic content:', parsed.photographerName)
+            setSiteContentAr(parsed)
+            setEditingContentAr(parsed)
+          } else {
+            localStorage.removeItem("cachedDbContentAr")
+            localStorage.removeItem("cachedDbContentAr_timestamp")
+          }
+        } catch (error) {
+          localStorage.removeItem("cachedDbContentAr")
+          localStorage.removeItem("cachedDbContentAr_timestamp")
+        }
       }
       
       // Load fresh database content in background to update cache
