@@ -60,7 +60,7 @@ export default function AdminPage() {
       setIsAuthenticated(false)
       router.push('/')
     } catch (error) {
-      console.error('Logout error:', error)
+      // Silent error handling for production
       localStorage.removeItem('adminToken')
       setIsAuthenticated(false)
       router.push('/')

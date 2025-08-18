@@ -3,8 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function GET() {
   try {
-    console.log('🔄 [API] Loading site content from Supabase...')
-    
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -17,18 +15,15 @@ export async function GET() {
       .limit(1)
 
     if (error) {
-      console.error('❌ [API] Supabase error:', error)
-      return NextResponse.json({ error: 'Database query failed', details: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Database query failed' }, { status: 500 })
     }
 
     // If no content exists yet, return 404 so frontend can use cached content
     if (!contentData || contentData.length === 0) {
-      console.log('⚠️ [API] No site content found in database')
       return NextResponse.json({ error: 'No site content found' }, { status: 404 })
     }
 
     const firstContent = contentData[0]
-    console.log('✅ [API] Site content loaded successfully:', firstContent.content?.photographerName || 'Unknown')
 
     // Return the content from the JSONB field plus metadata
     const formattedContent = {
@@ -41,11 +36,7 @@ export async function GET() {
 
     return NextResponse.json(formattedContent)
   } catch (error) {
-    console.error('❌ [API] Unexpected error loading site content:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -106,7 +97,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Site content creation error:', error)
       return NextResponse.json({ error: 'Failed to create site content' }, { status: 500 })
     }
 
@@ -118,7 +108,6 @@ export async function POST(request: NextRequest) {
       ...newContent.content, // Spread the content object
     })
   } catch (error) {
-    console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

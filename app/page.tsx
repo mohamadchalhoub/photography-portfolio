@@ -376,7 +376,7 @@ export default function PhotographerPortfolio() {
           }
         }
       } catch (error) {
-        console.error('Failed to load albums from database:', error)
+        // Silent error handling for production
       }
 
       // Fallback to localStorage only if no database albums
@@ -389,7 +389,6 @@ export default function PhotographerPortfolio() {
     // Load site content from database with better error handling
     const loadSiteContent = async () => {
       try {
-        console.log('🔄 Attempting to load content from database...')
         const response = await fetch('/api/site-content', {
           method: 'GET',
           headers: {
@@ -399,21 +398,16 @@ export default function PhotographerPortfolio() {
         
         if (response.ok) {
           const contentFromDB = await response.json()
-          console.log('✅ Database content loaded:', contentFromDB.photographerName, `(${contentFromDB.language})`)
           
           // Set the content based on language and cache it for next time
           if (contentFromDB.language === 'en') {
-            console.log('📝 ✅ Setting & caching English content:', contentFromDB.photographerName)
             setSiteContentEn(contentFromDB)
             setEditingContentEn(contentFromDB)
-            // Cache for instant loading next time
             localStorage.setItem("cachedDbContentEn", JSON.stringify(contentFromDB))
             localStorage.setItem("cachedDbContentEn_timestamp", Date.now().toString())
           } else if (contentFromDB.language === 'ar') {
-            console.log('📝 ✅ Setting & caching Arabic content:', contentFromDB.photographerName)
             setSiteContentAr(contentFromDB)
             setEditingContentAr(contentFromDB)
-            // Cache for instant loading next time
             localStorage.setItem("cachedDbContentAr", JSON.stringify(contentFromDB))
             localStorage.setItem("cachedDbContentAr_timestamp", Date.now().toString())
           }
@@ -422,26 +416,20 @@ export default function PhotographerPortfolio() {
           // If this is the first load (no cached content), mark as ready now
           if (!isContentLoaded) {
             setIsContentLoaded(true)
-            console.log('✅ First load complete - showing real content')
           }
           
           return true // Successfully loaded from database
         } else {
-          console.log('❌ Database content not found (404) - Using cached content if available')
           // Don't overwrite existing content with defaults on API failure
           return false
         }
       } catch (error) {
-        console.error('❌ CRITICAL: Failed to load site content from database:', error)
-        console.log('🛡️ PROTECTION: Keeping existing content, not reverting to defaults')
         // DON'T revert to defaults - keep whatever content we have
         return false
       }
     }
 
     const initializeData = async () => {
-      console.log('🚀 Starting data initialization...')
-      
       // Load other settings from localStorage first (fast)
       const savedLanguage = localStorage.getItem("currentLanguage") as Language
       const savedTheme = localStorage.getItem("currentTheme")
@@ -479,26 +467,20 @@ export default function PhotographerPortfolio() {
           const parsed = JSON.parse(cachedContentEn)
           // Additional validation - make sure it's real content, not defaults
           if (parsed.photographerName && parsed.photographerName !== "Your Name") {
-            console.log('⚡ Using cached English content:', parsed.photographerName)
             setSiteContentEn(parsed)
             setEditingContentEn(parsed)
             setIsDbContentLoaded(true)
             setIsContentLoaded(true)
-            console.log('✅ Ready to show cached content')
           } else {
-            console.log('🗑️ Cached content appears to be defaults - clearing cache')
             localStorage.removeItem("cachedDbContentEn")
             localStorage.removeItem("cachedDbContentEn_timestamp")
           }
         } catch (error) {
-          console.log('🗑️ Invalid cached content - clearing cache')
           localStorage.removeItem("cachedDbContentEn")
           localStorage.removeItem("cachedDbContentEn_timestamp")
         }
       } else {
-        console.log('⏳ No valid cached content, showing skeleton until database loads')
         if (cachedContentEn && !isCacheValid(cacheTimestampEn)) {
-          console.log('🗑️ Cache expired - clearing old cache')
           localStorage.removeItem("cachedDbContentEn")
           localStorage.removeItem("cachedDbContentEn_timestamp")
         }
@@ -508,7 +490,6 @@ export default function PhotographerPortfolio() {
         try {
           const parsed = JSON.parse(cachedContentAr)
           if (parsed.photographerName && parsed.photographerName !== "اسمك هنا") {
-            console.log('⚡ Using cached Arabic content:', parsed.photographerName)
             setSiteContentAr(parsed)
             setEditingContentAr(parsed)
           } else {
@@ -524,7 +505,6 @@ export default function PhotographerPortfolio() {
       // Load fresh database content in background to update cache
       loadAlbums()
       loadSiteContent()
-      console.log('🔄 Refreshing database content in background...')
     }
 
     initializeData()
@@ -624,7 +604,7 @@ export default function PhotographerPortfolio() {
         alert(errorData.error || "Login failed")
       }
     } catch (error) {
-      console.error('Login error:', error)
+      // Silent error handling for production
       alert("Login failed - please try again")
     }
   }
@@ -676,7 +656,7 @@ export default function PhotographerPortfolio() {
         throw new Error("Failed to save content")
       }
     } catch (error) {
-      console.error('Error saving content:', error)
+      // Silent error handling for production
       
       // Fallback to local storage update
       if (currentLanguage === "en") {
@@ -712,7 +692,6 @@ export default function PhotographerPortfolio() {
     setIsDbContentLoaded(false)
     setIsContentLoaded(false) // Force reload
     
-    console.log('🧹 Cleared all cache and reset to defaults')
     alert("Website reset to default settings!")
   }
 
@@ -751,13 +730,12 @@ export default function PhotographerPortfolio() {
           // Remove from local state only if database deletion succeeded
           setPortfolioAlbums(prev => prev.filter(album => album.id !== albumId))
           alert("Album deleted successfully!")
-          console.log('✅ Album deleted from database:', albumId)
         } else {
           const errorData = await response.json()
           throw new Error(errorData.error || "Failed to delete album")
         }
       } catch (error) {
-        console.error('Error deleting album:', error)
+        // Silent error handling for production
         alert("Failed to delete album from database. Please try again.")
       }
     }
@@ -804,7 +782,7 @@ export default function PhotographerPortfolio() {
       setEditingAlbum(null)
       setIsCreatingNewAlbum(false)
     } catch (error) {
-      console.error('Error saving album:', error)
+      // Silent error handling for production
       alert("Failed to save album. Please try again.")
     }
   }

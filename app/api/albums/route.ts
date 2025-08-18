@@ -18,7 +18,6 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (albumsError) {
-      console.error('Error fetching albums:', albumsError)
       return NextResponse.json(
         { error: 'Failed to fetch albums' },
         { status: 500 }
@@ -46,7 +45,6 @@ export async function GET() {
     
     return NextResponse.json(formattedAlbums)
   } catch (error) {
-    console.error('Error fetching albums:', error)
     return NextResponse.json(
       { error: 'Failed to fetch albums' },
       { status: 500 }
@@ -83,7 +81,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (albumError) {
-      console.error('Error creating album:', albumError)
       return NextResponse.json(
         { error: 'Failed to create album' },
         { status: 500 }
@@ -107,7 +104,6 @@ export async function POST(request: NextRequest) {
         .insert(imageData)
 
       if (imagesError) {
-        console.error('Error creating images:', imagesError)
         // Album was created but images failed - you might want to handle this
       }
     }
@@ -123,7 +119,6 @@ export async function POST(request: NextRequest) {
       images: albumImages || []
     })
   } catch (error) {
-    console.error('Error creating album:', error)
     return NextResponse.json(
       { error: 'Failed to create album' },
       { status: 500 }

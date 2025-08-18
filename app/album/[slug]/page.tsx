@@ -226,7 +226,6 @@ export default function AlbumPage({ params }: AlbumPageProps) {
           setPortfolioAlbums(defaultAlbums)
         }
       } catch (error) {
-        console.error('Error parsing localStorage albums:', error)
         // If localStorage data is corrupted, fall back to defaults
         albumsToUse = defaultAlbums
         setPortfolioAlbums(defaultAlbums)
@@ -234,11 +233,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
     }
 
     // Find the specific album
-    console.log('Looking for album with slug:', params.slug)
-    console.log('Available albums:', albumsToUse.map(a => ({ id: a.id, title: a.title })))
-    
     const foundAlbum = albumsToUse.find((album) => album.id === params.slug)
-    console.log('Found album:', foundAlbum ? foundAlbum.title : 'Not found')
     
     setAlbum(foundAlbum || null)
     setIsLoading(false)

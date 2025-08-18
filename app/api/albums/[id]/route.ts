@@ -7,7 +7,6 @@ export async function DELETE(
 ) {
   try {
     const albumId = params.id
-    console.log('🗑️ Deleting album:', albumId)
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,14 +21,11 @@ export async function DELETE(
       .single()
 
     if (fetchError || !album) {
-      console.error('Album not found:', fetchError)
       return NextResponse.json(
         { error: 'Album not found' },
         { status: 404 }
       )
     }
-
-    console.log('📝 Found album to delete:', album.title, `(ID: ${album.id})`)
 
     // Delete associated images first (due to foreign key constraint)
     const { error: imagesError } = await supabase
@@ -38,14 +34,11 @@ export async function DELETE(
       .eq('album_id', album.id)
 
     if (imagesError) {
-      console.error('Error deleting album images:', imagesError)
       return NextResponse.json(
         { error: 'Failed to delete album images' },
         { status: 500 }
       )
     }
-
-    console.log('✅ Deleted album images')
 
     // Now delete the album
     const { error: albumError } = await supabase
@@ -54,14 +47,11 @@ export async function DELETE(
       .eq('id', album.id)
 
     if (albumError) {
-      console.error('Error deleting album:', albumError)
       return NextResponse.json(
         { error: 'Failed to delete album' },
         { status: 500 }
       )
     }
-
-    console.log('✅ Album deleted successfully:', album.title)
 
     return NextResponse.json({
       message: 'Album deleted successfully',
@@ -71,7 +61,6 @@ export async function DELETE(
       }
     })
   } catch (error) {
-    console.error('Unexpected error deleting album:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
