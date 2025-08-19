@@ -2206,7 +2206,7 @@ export default function PhotographerPortfolio() {
                       <h3 className="text-xl font-semibold text-stone-100">Profile Settings</h3>
                       <div className="bg-stone-700 p-6 rounded-lg space-y-4">
                         <p className="text-stone-300">
-                          Current admin password: <span style={{ color: "var(--theme-primary)" }}>admin123</span>
+                          Admin authentication is configured for local development.
                         </p>
                         <p className="text-stone-400 text-sm">
                           In a production environment, you would be able to change your password and manage user
