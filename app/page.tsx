@@ -1429,7 +1429,7 @@ export default function PhotographerPortfolio() {
                   >
                     Login
                   </Button>
-                  <p className="text-sm text-stone-400 text-center">Username: admin | Password: password</p>
+
                 </div>
               </div>
             ) : (
