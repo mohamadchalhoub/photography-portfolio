@@ -1,7 +1,7 @@
 "use client"
 import Image from "next/image"
 import Link from "next/link"
-import { Camera, ArrowLeft, Download, Share } from "lucide-react"
+import { Camera, ArrowLeft, Download, Share, Copy, Check, Facebook, Twitter, Linkedin, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { notFound } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -218,6 +218,8 @@ export default function AlbumPage({ params }: AlbumPageProps) {
   const [album, setAlbum] = useState<PortfolioAlbum | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [siteContent, setSiteContent] = useState<SiteContent | null>(null)
+  const [showShareMenu, setShowShareMenu] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     // Load site content first
@@ -303,6 +305,69 @@ export default function AlbumPage({ params }: AlbumPageProps) {
     }
   }, [params.slug])
 
+  // Close share menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (showShareMenu && !target.closest('.share-menu-container')) {
+        setShowShareMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showShareMenu])
+
+  // Share functions
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const albumTitle = album?.title || 'Photo Album'
+  const photographerName = siteContent?.photographerName || "Abdul Kader Al Bay"
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(currentUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = currentUrl
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const shareOnSocial = (platform: string) => {
+    const shareText = `Check out this amazing photo album "${albumTitle}" by ${photographerName} Photography!`
+    const encodedUrl = encodeURIComponent(currentUrl)
+    const encodedText = encodeURIComponent(shareText)
+    
+    let shareUrl = ''
+    
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
+        break
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`
+        break
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`
+        break
+      case 'email':
+        shareUrl = `mailto:?subject=${encodeURIComponent(`Photo Album: ${albumTitle}`)}&body=${encodeURIComponent(`${shareText}\n\nView the album here: ${currentUrl}`)}`
+        break
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400')
+    }
+  }
+
   // Show loading state while data is being fetched
   if (isLoading) {
     return (
@@ -339,11 +404,73 @@ export default function AlbumPage({ params }: AlbumPageProps) {
               <Camera className="h-6 w-6 text-amber-500" />
               <span className="text-xl font-bold">{siteContent?.photographerName || "Abdul Kader Al Bay"} Photography</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" className="border-stone-600 text-stone-300 hover:bg-stone-700">
+            <div className="flex items-center space-x-2 relative share-menu-container">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-stone-600 text-stone-300 hover:bg-stone-700"
+                onClick={() => setShowShareMenu(!showShareMenu)}
+              >
                 <Share className="h-4 w-4 mr-2" />
                 Share
               </Button>
+              
+              {/* Share Menu Dropdown */}
+              {showShareMenu && (
+                <div className="absolute top-full right-0 mt-2 w-64 bg-stone-800 border border-stone-600 rounded-lg shadow-xl z-50">
+                  <div className="p-4">
+                    <h3 className="text-stone-100 font-semibold mb-3">Share this album</h3>
+                    
+                    {/* Copy Link */}
+                    <button
+                      onClick={copyToClipboard}
+                      className="w-full flex items-center space-x-3 p-3 text-stone-300 hover:bg-stone-700 rounded-lg transition-colors mb-2"
+                    >
+                      {copied ? (
+                        <Check className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Copy className="h-5 w-5" />
+                      )}
+                      <span>{copied ? 'Link copied!' : 'Copy link'}</span>
+                    </button>
+                    
+                    {/* Social Media Options */}
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => shareOnSocial('facebook')}
+                        className="w-full flex items-center space-x-3 p-3 text-stone-300 hover:bg-stone-700 rounded-lg transition-colors"
+                      >
+                        <Facebook className="h-5 w-5 text-blue-500" />
+                        <span>Share on Facebook</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => shareOnSocial('twitter')}
+                        className="w-full flex items-center space-x-3 p-3 text-stone-300 hover:bg-stone-700 rounded-lg transition-colors"
+                      >
+                        <Twitter className="h-5 w-5 text-blue-400" />
+                        <span>Share on Twitter</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => shareOnSocial('linkedin')}
+                        className="w-full flex items-center space-x-3 p-3 text-stone-300 hover:bg-stone-700 rounded-lg transition-colors"
+                      >
+                        <Linkedin className="h-5 w-5 text-blue-600" />
+                        <span>Share on LinkedIn</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => shareOnSocial('email')}
+                        className="w-full flex items-center space-x-3 p-3 text-stone-300 hover:bg-stone-700 rounded-lg transition-colors"
+                      >
+                        <Mail className="h-5 w-5 text-gray-400" />
+                        <span>Share via Email</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -371,6 +498,15 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                 <div className="text-center">
                   <div className="text-2xl font-bold text-amber-500">{album.year}</div>
                   <div className="text-sm">Year</div>
+                </div>
+                <div className="text-center">
+                  <Button
+                    onClick={() => setShowShareMenu(!showShareMenu)}
+                    className="bg-amber-500 hover:bg-amber-600 text-stone-900 font-semibold"
+                  >
+                    <Share className="h-4 w-4 mr-2" />
+                    Share Album
+                  </Button>
                 </div>
               </div>
             </div>
