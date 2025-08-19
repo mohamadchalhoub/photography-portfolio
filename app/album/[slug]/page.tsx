@@ -1,7 +1,7 @@
 "use client"
 import Image from "next/image"
 import Link from "next/link"
-import { Camera, ArrowLeft, Download, Share, Copy, Check, Facebook, Twitter, Linkedin, Mail } from "lucide-react"
+import { Camera, ArrowLeft, Download, Share, Copy, Check, Facebook, Twitter, Linkedin, Mail, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { notFound } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -361,6 +361,9 @@ export default function AlbumPage({ params }: AlbumPageProps) {
       case 'email':
         shareUrl = `mailto:?subject=${encodeURIComponent(`Photo Album: ${albumTitle}`)}&body=${encodeURIComponent(`${shareText}\n\nView the album here: ${currentUrl}`)}`
         break
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText}\n\n${currentUrl}`)}`
+        break
     }
     
     if (shareUrl) {
@@ -507,6 +510,14 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                       >
                         <Mail className="h-5 w-5 text-gray-400" />
                         <span>Share via Email</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => shareOnSocial('whatsapp')}
+                        className="w-full flex items-center space-x-3 p-3 text-stone-300 hover:bg-stone-700 rounded-lg transition-colors"
+                      >
+                        <MessageCircle className="h-5 w-5 text-green-500" />
+                        <span>Share on WhatsApp</span>
                       </button>
                     </div>
                   </div>
