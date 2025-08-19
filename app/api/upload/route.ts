@@ -1,50 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File
+    const { imageData, filename, albumId } = await request.json()
 
-    if (!file) {
+    if (!imageData || !filename) {
       return NextResponse.json(
-        { error: 'No file provided' },
+        { error: 'Image data and filename are required' },
         { status: 400 }
       )
     }
 
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json(
-        { error: 'File must be an image' },
-        { status: 400 }
-      )
+    // For now, we'll store the base64 data directly in the database
+    // In a production environment, you'd want to upload to a proper storage service
+    // like Vercel Blob, AWS S3, or Supabase Storage
+    
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
+    // If albumId is provided, we're adding an image to an album
+    if (albumId) {
+      const { data: newImage, error } = await supabase
+        .from('images')
+        .insert({
+          album_id: albumId,
+          src: imageData,
+          alt: filename,
+          title: filename,
+          location: '',
+          aspect_ratio: '3/2'
+        })
+        .select()
+        .single()
+
+      if (error) {
+        return NextResponse.json(
+          { error: 'Failed to save image to database' },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        id: newImage.id,
+        src: newImage.src,
+        alt: newImage.alt,
+        title: newImage.title,
+        location: newImage.location,
+        aspectRatio: newImage.aspect_ratio
+      })
     }
 
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: 'File size must be less than 10MB' },
-        { status: 400 }
-      )
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 15)
-    const extension = file.name.split('.').pop()
-    const filename = `portfolio/${timestamp}-${randomString}.${extension}`
-
-    // Upload to Vercel Blob
-    const blob = await put(filename, file, {
-      access: 'public',
-    })
-
+    // For general uploads (not album-specific)
     return NextResponse.json({
-      url: blob.url,
+      url: imageData,
       filename: filename,
-      size: file.size,
-      type: file.type,
+      size: imageData.length,
+      type: 'image/jpeg'
     })
   } catch (error) {
     return NextResponse.json(

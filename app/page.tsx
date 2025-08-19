@@ -771,11 +771,32 @@ export default function PhotographerPortfolio() {
           throw new Error("Failed to create album")
         }
       } else {
-        // Update existing album locally for now
-        setPortfolioAlbums(prev => prev.map(album => 
-          album.id === editingAlbum.id ? editingAlbum : album
-        ))
-        alert("Album updated locally!")
+        // Update existing album in database
+        const response = await fetch(`/api/albums/${editingAlbum.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: editingAlbum.title,
+            description: editingAlbum.description,
+            coverImage: editingAlbum.coverImage,
+            location: editingAlbum.location,
+            year: editingAlbum.year,
+            aspectRatio: editingAlbum.aspectRatio,
+            images: editingAlbum.images,
+          }),
+        })
+
+        if (response.ok) {
+          const updatedAlbum = await response.json()
+          setPortfolioAlbums(prev => prev.map(album => 
+            album.id === editingAlbum.id ? updatedAlbum : album
+          ))
+          alert("Album updated and saved to database!")
+        } else {
+          throw new Error("Failed to update album")
+        }
       }
 
       setShowAlbumModal(false)
@@ -787,31 +808,89 @@ export default function PhotographerPortfolio() {
     }
   }
 
-  const handleAlbumImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'coverImage' | 'newPhoto') => {
+  const handleAlbumImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'coverImage' | 'newPhoto') => {
     const file = e.target.files?.[0]
     if (file && editingAlbum) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const imageUrl = e.target?.result as string
-        
-        if (field === 'coverImage') {
-          setEditingAlbum(prev => prev ? { ...prev, coverImage: imageUrl } : null)
-        } else if (field === 'newPhoto') {
-          const newPhoto: PortfolioImage = {
-            id: `photo-${Date.now()}`,
-            src: imageUrl,
-            alt: `Photo from ${editingAlbum.title}`,
-            title: `${editingAlbum.title} Photo`,
-            location: `${editingAlbum.location}, ${editingAlbum.year}`,
-            aspectRatio: editingAlbum.aspectRatio
+      try {
+        // Convert file to base64
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+          const imageData = e.target?.result as string
+          
+          if (field === 'coverImage') {
+            // For cover image, just update locally for now
+            setEditingAlbum(prev => prev ? { ...prev, coverImage: imageData } : null)
+          } else if (field === 'newPhoto') {
+            // For new photos, upload to server if album exists in database
+            if (!isCreatingNewAlbum && editingAlbum.id) {
+              try {
+                const response = await fetch('/api/upload', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    imageData: imageData,
+                    filename: file.name,
+                    albumId: editingAlbum.id
+                  }),
+                })
+
+                if (response.ok) {
+                  const uploadedImage = await response.json()
+                  const newPhoto: PortfolioImage = {
+                    id: uploadedImage.id.toString(),
+                    src: uploadedImage.src,
+                    alt: uploadedImage.alt,
+                    title: uploadedImage.title,
+                    location: uploadedImage.location,
+                    aspectRatio: uploadedImage.aspectRatio
+                  }
+                  setEditingAlbum(prev => prev ? {
+                    ...prev,
+                    images: [...prev.images, newPhoto]
+                  } : null)
+                  alert("Photo uploaded and saved to database!")
+                } else {
+                  throw new Error("Failed to upload photo")
+                }
+              } catch (error) {
+                // Fallback to local storage if upload fails
+                const newPhoto: PortfolioImage = {
+                  id: `photo-${Date.now()}`,
+                  src: imageData,
+                  alt: `Photo from ${editingAlbum.title}`,
+                  title: `${editingAlbum.title} Photo`,
+                  location: `${editingAlbum.location}, ${editingAlbum.year}`,
+                  aspectRatio: editingAlbum.aspectRatio
+                }
+                setEditingAlbum(prev => prev ? {
+                  ...prev,
+                  images: [...prev.images, newPhoto]
+                } : null)
+                alert("Photo saved locally (upload failed)")
+              }
+            } else {
+              // For new albums, save locally until album is created
+              const newPhoto: PortfolioImage = {
+                id: `photo-${Date.now()}`,
+                src: imageData,
+                alt: `Photo from ${editingAlbum.title}`,
+                title: `${editingAlbum.title} Photo`,
+                location: `${editingAlbum.location}, ${editingAlbum.year}`,
+                aspectRatio: editingAlbum.aspectRatio
+              }
+              setEditingAlbum(prev => prev ? {
+                ...prev,
+                images: [...prev.images, newPhoto]
+              } : null)
+            }
           }
-          setEditingAlbum(prev => prev ? {
-            ...prev,
-            images: [...prev.images, newPhoto]
-          } : null)
         }
+        reader.readAsDataURL(file)
+      } catch (error) {
+        alert("Failed to process image. Please try again.")
       }
-      reader.readAsDataURL(file)
     }
   }
 
