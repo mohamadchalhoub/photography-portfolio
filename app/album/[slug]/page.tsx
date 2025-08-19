@@ -368,6 +368,47 @@ export default function AlbumPage({ params }: AlbumPageProps) {
     }
   }
 
+  // Download photo function
+  const downloadPhoto = async (imageSrc: string, imageTitle: string) => {
+    try {
+      // Create a temporary link element
+      const link = document.createElement('a')
+      link.href = imageSrc
+      
+      // Generate filename from image title and current timestamp
+      const timestamp = new Date().toISOString().slice(0, 10) // YYYY-MM-DD format
+      const sanitizedTitle = imageTitle.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
+      const filename = `${sanitizedTitle}_${timestamp}.jpg`
+      
+      link.download = filename
+      link.target = '_blank'
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Show success feedback
+      const originalText = 'Download'
+      const button = document.querySelector(`[data-download="${imageTitle}"]`) as HTMLButtonElement
+      if (button) {
+        const originalContent = button.innerHTML
+        button.innerHTML = '<Check className="h-4 w-4" />'
+        button.disabled = true
+        button.className = button.className.replace('hover:bg-stone-800', 'bg-green-600')
+        
+        setTimeout(() => {
+          button.innerHTML = originalContent
+          button.disabled = false
+          button.className = button.className.replace('bg-green-600', 'hover:bg-stone-800')
+        }, 2000)
+      }
+    } catch (error) {
+      console.error('Download failed:', error)
+      alert('Download failed. Please try again.')
+    }
+  }
+
   // Show loading state while data is being fetched
   if (isLoading) {
     return (
@@ -510,7 +551,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                 </div>
               </div>
             </div>
-            <div className="relative">
+            <div className="relative group">
               <div
                 className="relative overflow-hidden rounded-lg border-4 border-stone-600"
                 style={{ aspectRatio: album.aspectRatio || "3/2" }}
@@ -521,6 +562,19 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                   fill
                   className="object-cover"
                 />
+                {/* Download button for cover image */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-stone-900/80 backdrop-blur-sm border-stone-600 text-stone-200 hover:bg-stone-800"
+                    onClick={() => downloadPhoto(album.coverImage, `${album.title} - Cover`)}
+                    data-download={`${album.title} - Cover`}
+                    title={`Download ${album.title} Cover`}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -556,6 +610,9 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                     size="sm"
                     variant="outline"
                     className="bg-stone-900/80 backdrop-blur-sm border-stone-600 text-stone-200 hover:bg-stone-800"
+                    onClick={() => downloadPhoto(image.src, image.title)}
+                    data-download={image.title}
+                    title={`Download ${image.title}`}
                   >
                     <Download className="h-4 w-4" />
                   </Button>
