@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button"
 import { notFound } from "next/navigation"
 import { useState, useEffect } from "react"
 
+// Site content interface
+interface SiteContent {
+  photographerName: string
+  language: string
+  // Add other fields as needed
+}
+
 // This would normally come from a context or props, but for now we'll duplicate the data structure
 interface PortfolioImage {
   id: string
@@ -210,8 +217,35 @@ export default function AlbumPage({ params }: AlbumPageProps) {
   const [portfolioAlbums, setPortfolioAlbums] = useState<PortfolioAlbum[]>(defaultAlbums)
   const [album, setAlbum] = useState<PortfolioAlbum | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [siteContent, setSiteContent] = useState<SiteContent | null>(null)
 
   useEffect(() => {
+    // Load site content first
+    const loadSiteContent = async () => {
+      try {
+        const response = await fetch('/api/site-content')
+        if (response.ok) {
+          const content = await response.json()
+          setSiteContent(content)
+        }
+      } catch (error) {
+        // Fallback to cached content if available
+        const cachedContent = localStorage.getItem("cachedDbContentEn") || localStorage.getItem("cachedDbContentAr")
+        if (cachedContent) {
+          try {
+            setSiteContent(JSON.parse(cachedContent))
+          } catch (e) {
+            // Use default if all else fails
+            setSiteContent({ photographerName: "Abdul Kader Al Bay", language: "en" })
+          }
+        } else {
+          setSiteContent({ photographerName: "Abdul Kader Al Bay", language: "en" })
+        }
+      }
+    }
+
+    loadSiteContent()
+
     // Load albums from localStorage on component mount
     const savedAlbums = localStorage.getItem("portfolioAlbums")
     let albumsToUse = defaultAlbums
@@ -303,7 +337,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
             </div>
             <div className="flex items-center space-x-2">
               <Camera className="h-6 w-6 text-amber-500" />
-              <span className="text-xl font-bold">Alex Morgan Photography</span>
+              <span className="text-xl font-bold">{siteContent?.photographerName || "Abdul Kader Al Bay"} Photography</span>
             </div>
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm" className="border-stone-600 text-stone-300 hover:bg-stone-700">
@@ -442,7 +476,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <Camera className="h-5 w-5 text-amber-500" />
-              <span className="text-stone-100 font-semibold">Alex Morgan Photography</span>
+                              <span className="text-stone-100 font-semibold">{siteContent?.photographerName || "Abdul Kader Al Bay"} Photography</span>
             </div>
             <p className="text-stone-400 text-sm">
               © {new Date().getFullYear()} All rights reserved. Documenting humanity with respect and dignity.
