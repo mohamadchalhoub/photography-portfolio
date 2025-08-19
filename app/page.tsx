@@ -850,7 +850,7 @@ export default function PhotographerPortfolio() {
       </nav>
 
       {/* Hero Section Skeleton */}
-      <section className="pt-20 pb-16 px-4">
+      <section className="pt-24 md:pt-32 pb-16 px-4">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center min-h-[80vh]">
             <div className="space-y-8">
@@ -1016,7 +1016,7 @@ export default function PhotographerPortfolio() {
       </nav>
 
       {/* Hero Section */}
-      <section id="home" className="pt-20 pb-16 px-4">
+      <section id="home" className="pt-24 md:pt-32 pb-16 px-4">
         <div className="container mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[80vh]">
             <div className="space-y-6">
