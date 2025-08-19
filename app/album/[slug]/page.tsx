@@ -1,7 +1,7 @@
 "use client"
 import Image from "next/image"
 import Link from "next/link"
-import { Camera, ArrowLeft, Download, Share, Copy, Check, Facebook, Twitter, Linkedin, Mail, MessageCircle } from "lucide-react"
+import { Camera, ArrowLeft, Download, Share, Copy, Check, Facebook, Twitter, Linkedin, Mail, MessageCircle, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { notFound } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -220,6 +220,8 @@ export default function AlbumPage({ params }: AlbumPageProps) {
   const [siteContent, setSiteContent] = useState<SiteContent | null>(null)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<PortfolioImage | null>(null)
+  const [showFullscreen, setShowFullscreen] = useState(false)
 
   useEffect(() => {
     // Load site content first
@@ -370,6 +372,55 @@ export default function AlbumPage({ params }: AlbumPageProps) {
       window.open(shareUrl, '_blank', 'width=600,height=400')
     }
   }
+
+  // Fullscreen viewer functions
+  const openFullscreen = (image: PortfolioImage) => {
+    setSelectedImage(image)
+    setShowFullscreen(true)
+    document.body.style.overflow = 'hidden' // Prevent background scrolling
+  }
+
+  const closeFullscreen = () => {
+    setShowFullscreen(false)
+    setSelectedImage(null)
+    document.body.style.overflow = 'unset' // Restore scrolling
+  }
+
+  const nextImage = () => {
+    if (!selectedImage || !album) return
+    const currentIndex = album.images.findIndex(img => img.id === selectedImage.id)
+    const nextIndex = (currentIndex + 1) % album.images.length
+    setSelectedImage(album.images[nextIndex])
+  }
+
+  const previousImage = () => {
+    if (!selectedImage || !album) return
+    const currentIndex = album.images.findIndex(img => img.id === selectedImage.id)
+    const prevIndex = currentIndex === 0 ? album.images.length - 1 : currentIndex - 1
+    setSelectedImage(album.images[prevIndex])
+  }
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!showFullscreen) return
+      
+      switch (e.key) {
+        case 'Escape':
+          closeFullscreen()
+          break
+        case 'ArrowRight':
+          nextImage()
+          break
+        case 'ArrowLeft':
+          previousImage()
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showFullscreen, selectedImage, album])
 
   // Download photo function
   const downloadPhoto = async (imageSrc: string, imageTitle: string) => {
@@ -598,7 +649,8 @@ export default function AlbumPage({ params }: AlbumPageProps) {
           {album.images.map((image, index) => (
             <div
               key={image.id}
-              className="group relative overflow-hidden rounded-lg bg-stone-800 transition-all duration-300 hover:scale-105"
+              className="group relative overflow-hidden rounded-lg bg-stone-800 transition-all duration-300 hover:scale-105 cursor-pointer"
+              onClick={() => openFullscreen(image)}
             >
               <div className="relative" style={{ aspectRatio: image.aspectRatio || "3/2" }}>
                 <Image
@@ -621,7 +673,10 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                     size="sm"
                     variant="outline"
                     className="bg-stone-900/80 backdrop-blur-sm border-stone-600 text-stone-200 hover:bg-stone-800"
-                    onClick={() => downloadPhoto(image.src, image.title)}
+                    onClick={(e) => {
+                      e.stopPropagation() // Prevent opening fullscreen when clicking download
+                      downloadPhoto(image.src, image.title)
+                    }}
                     data-download={image.title}
                     title={`Download ${image.title}`}
                   >
@@ -688,6 +743,69 @@ export default function AlbumPage({ params }: AlbumPageProps) {
           </div>
         </div>
       </footer>
+
+      {/* Fullscreen Image Modal */}
+      {showFullscreen && selectedImage && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center">
+          {/* Close button */}
+          <button
+            onClick={closeFullscreen}
+            className="absolute top-4 right-4 z-10 p-2 bg-stone-900/80 rounded-full text-stone-300 hover:text-white transition-colors"
+            aria-label="Close fullscreen view"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Navigation buttons */}
+          <button
+            onClick={previousImage}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 p-3 bg-stone-900/80 rounded-full text-stone-300 hover:text-white transition-colors"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="h-8 w-8" />
+          </button>
+
+          <button
+            onClick={nextImage}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 p-3 bg-stone-900/80 rounded-full text-stone-300 hover:text-white transition-colors"
+            aria-label="Next image"
+          >
+            <ChevronRight className="h-8 w-8" />
+          </button>
+
+          {/* Image container */}
+          <div className="relative w-full h-full flex items-center justify-center p-8">
+            <div className="relative max-w-full max-h-full">
+              <Image
+                src={selectedImage.src}
+                alt={selectedImage.alt}
+                width={1200}
+                height={800}
+                className="max-w-full max-h-full object-contain"
+                priority
+              />
+            </div>
+          </div>
+
+          {/* Image info overlay */}
+          <div className="absolute bottom-4 left-4 right-4 bg-stone-900/80 backdrop-blur-sm rounded-lg p-4 text-stone-100">
+            <h3 className="text-xl font-bold mb-1">{selectedImage.title}</h3>
+            <p className="text-amber-500">{selectedImage.location}</p>
+            <p className="text-sm text-stone-400 mt-2">
+              {album.images.findIndex(img => img.id === selectedImage.id) + 1} of {album.images.length}
+            </p>
+          </div>
+
+          {/* Download button in fullscreen */}
+          <button
+            onClick={() => downloadPhoto(selectedImage.src, selectedImage.title)}
+            className="absolute top-4 left-4 z-10 p-2 bg-stone-900/80 rounded-full text-stone-300 hover:text-white transition-colors"
+            aria-label="Download image"
+          >
+            <Download className="h-6 w-6" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
