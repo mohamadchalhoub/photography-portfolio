@@ -768,7 +768,8 @@ export default function PhotographerPortfolio() {
           setPortfolioAlbums(prev => [...prev, newAlbum])
           alert("Album created and saved to database!")
         } else {
-          throw new Error("Failed to create album")
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to create album")
         }
       } else {
         // Update existing album in database
@@ -795,7 +796,8 @@ export default function PhotographerPortfolio() {
           ))
           alert("Album updated and saved to database!")
         } else {
-          throw new Error("Failed to update album")
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to update album")
         }
       }
 
@@ -803,8 +805,8 @@ export default function PhotographerPortfolio() {
       setEditingAlbum(null)
       setIsCreatingNewAlbum(false)
     } catch (error) {
-      // Silent error handling for production
-      alert("Failed to save album. Please try again.")
+      console.error('Album save error:', error)
+      alert(`Failed to save album: ${error.message}`)
     }
   }
 

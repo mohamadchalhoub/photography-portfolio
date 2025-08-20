@@ -81,8 +81,9 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (albumError) {
+      console.error('Album creation error:', albumError)
       return NextResponse.json(
-        { error: 'Failed to create album' },
+        { error: `Failed to create album: ${albumError.message}` },
         { status: 500 }
       )
     }
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     // Insert images if provided
     if (albumImages && albumImages.length > 0) {
       const imageData = albumImages.map((img: any, index: number) => ({
-        album_id: newAlbum.id,
+        album_id: newAlbum.id, // This is the database ID (integer)
         src: img.src,
         alt: img.alt,
         title: img.title,
@@ -104,6 +105,7 @@ export async function POST(request: NextRequest) {
         .insert(imageData)
 
       if (imagesError) {
+        console.error('Failed to insert images:', imagesError)
         // Album was created but images failed - you might want to handle this
       }
     }
