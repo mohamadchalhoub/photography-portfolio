@@ -1,6 +1,7 @@
 "use client"
 import Image from "next/image"
 import type React from "react"
+import LazyImage from "@/components/LazyImage"
 
 import Link from "next/link"
 import {
@@ -814,84 +815,95 @@ export default function PhotographerPortfolio() {
     const file = e.target.files?.[0]
     if (file && editingAlbum) {
       try {
-        // Convert file to base64
-        const reader = new FileReader()
-        reader.onload = async (e) => {
-          const imageData = e.target?.result as string
-          
-          if (field === 'coverImage') {
-            // For cover image, just update locally for now
-            setEditingAlbum(prev => prev ? { ...prev, coverImage: imageData } : null)
-          } else if (field === 'newPhoto') {
-            // For new photos, upload to server if album exists in database
-            if (!isCreatingNewAlbum && editingAlbum.id) {
-              try {
-                const response = await fetch('/api/upload', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    imageData: imageData,
-                    filename: file.name,
-                    albumId: editingAlbum.id
-                  }),
-                })
+        // Validate file size (10MB limit)
+        const maxSize = 10 * 1024 * 1024 // 10MB
+        if (file.size > maxSize) {
+          alert(`File size exceeds 10MB limit. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
+          return
+        }
 
-                if (response.ok) {
-                  const uploadedImage = await response.json()
-                  const newPhoto: PortfolioImage = {
-                    id: uploadedImage.id.toString(),
-                    src: uploadedImage.src,
-                    alt: uploadedImage.alt,
-                    title: uploadedImage.title,
-                    location: uploadedImage.location,
-                    aspectRatio: uploadedImage.aspectRatio
-                  }
-                  setEditingAlbum(prev => prev ? {
-                    ...prev,
-                    images: [...prev.images, newPhoto]
-                  } : null)
-                  alert("Photo uploaded and saved to database!")
-                } else {
-                  throw new Error("Failed to upload photo")
-                }
-              } catch (error) {
-                // Fallback to local storage if upload fails
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+        if (!allowedTypes.includes(file.type)) {
+          alert('Invalid file type. Only JPEG, PNG, and WebP images are allowed.')
+          return
+        }
+
+        if (field === 'coverImage') {
+          // For cover image, upload and get URL
+          const formData = new FormData()
+          formData.append('file', file)
+
+          try {
+            const response = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            })
+
+            if (response.ok) {
+              const uploadResult = await response.json()
+              setEditingAlbum(prev => prev ? { ...prev, coverImage: uploadResult.url } : null)
+            } else {
+              const errorData = await response.json()
+              throw new Error(errorData.error || 'Upload failed')
+            }
+          } catch (error) {
+            alert(`Failed to upload cover image: ${error.message}`)
+          }
+        } else if (field === 'newPhoto') {
+          // For new photos, upload to server if album exists in database
+          if (!isCreatingNewAlbum && editingAlbum.id) {
+            try {
+              const formData = new FormData()
+              formData.append('file', file)
+              formData.append('albumId', editingAlbum.id.toString())
+
+              const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+              })
+
+              if (response.ok) {
+                const uploadedImage = await response.json()
                 const newPhoto: PortfolioImage = {
-                  id: `photo-${Date.now()}`,
-                  src: imageData,
-                  alt: `Photo from ${editingAlbum.title}`,
-                  title: `${editingAlbum.title} Photo`,
-                  location: `${editingAlbum.location}, ${editingAlbum.year}`,
-                  aspectRatio: editingAlbum.aspectRatio
+                  id: uploadedImage.id.toString(),
+                  src: uploadedImage.src,
+                  alt: uploadedImage.alt,
+                  title: uploadedImage.title,
+                  location: uploadedImage.location,
+                  aspectRatio: uploadedImage.aspectRatio
                 }
                 setEditingAlbum(prev => prev ? {
                   ...prev,
                   images: [...prev.images, newPhoto]
                 } : null)
-                alert("Photo saved locally (upload failed)")
+                alert("Photo uploaded and saved to database!")
+              } else {
+                const errorData = await response.json()
+                throw new Error(errorData.error || "Failed to upload photo")
               }
-            } else {
-              // For new albums, save locally until album is created
-              const newPhoto: PortfolioImage = {
-                id: `photo-${Date.now()}`,
-                src: imageData,
-                alt: `Photo from ${editingAlbum.title}`,
-                title: `${editingAlbum.title} Photo`,
-                location: `${editingAlbum.location}, ${editingAlbum.year}`,
-                aspectRatio: editingAlbum.aspectRatio
-              }
-              setEditingAlbum(prev => prev ? {
-                ...prev,
-                images: [...prev.images, newPhoto]
-              } : null)
+            } catch (error) {
+              alert(`Failed to upload photo: ${error.message}`)
             }
+          } else {
+            // For new albums, create a preview URL and save locally until album is created
+            const previewUrl = URL.createObjectURL(file)
+            const newPhoto: PortfolioImage = {
+              id: `photo-${Date.now()}`,
+              src: previewUrl,
+              alt: `Photo from ${editingAlbum.title}`,
+              title: `${editingAlbum.title} Photo`,
+              location: `${editingAlbum.location}, ${editingAlbum.year}`,
+              aspectRatio: editingAlbum.aspectRatio
+            }
+            setEditingAlbum(prev => prev ? {
+              ...prev,
+              images: [...prev.images, newPhoto]
+            } : null)
           }
         }
-        reader.readAsDataURL(file)
       } catch (error) {
-        alert("Failed to process image. Please try again.")
+        alert(`Failed to process image: ${error.message}`)
       }
     }
   }
@@ -1183,11 +1195,12 @@ export default function PhotographerPortfolio() {
                 className="group relative overflow-hidden rounded-lg bg-stone-700 cursor-pointer transition-transform duration-300 hover:scale-105"
               >
                 <div className="relative" style={{ aspectRatio: album.aspectRatio || "3/2" }}>
-                  <Image
+                  <LazyImage
                     src={album.coverImage || "/placeholder.svg"}
                     alt={album.description}
-                    fill
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    aspectRatio={album.aspectRatio || "3/2"}
+                    priority={index < 3} // Prioritize first 3 images
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="absolute top-4 right-4 bg-stone-900/70 backdrop-blur-sm rounded-full px-3 py-1">

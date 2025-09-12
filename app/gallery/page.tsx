@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Camera, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
+import LazyImage from "@/components/LazyImage"
 
 // Site content interface
 interface SiteContent {
@@ -324,11 +325,11 @@ export default function GalleryPage() {
               className="group relative overflow-hidden rounded-lg bg-stone-800 transition-all duration-300 hover:scale-105 hover:shadow-2xl"
             >
               <div className="relative" style={{ aspectRatio: album.aspectRatio || "3/2" }}>
-                <Image
+                <LazyImage
                   src={album.coverImage}
                   alt={album.description}
-                  fill
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  aspectRatio={album.aspectRatio || "3/2"}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-stone-900/90 via-stone-900/20 to-transparent" />
                 

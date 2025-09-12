@@ -5,6 +5,7 @@ import { Camera, ArrowLeft, Download, Share, Copy, Check, Facebook, Twitter, Lin
 import { Button } from "@/components/ui/button"
 import { notFound } from "next/navigation"
 import { useState, useEffect } from "react"
+import LazyImage from "@/components/LazyImage"
 
 // Site content interface
 interface SiteContent {
@@ -618,11 +619,12 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                 className="relative overflow-hidden rounded-lg border-4 border-stone-600"
                 style={{ aspectRatio: album.aspectRatio || "3/2" }}
               >
-                <Image
+                <LazyImage
                   src={album.coverImage}
                   alt={album.description}
-                  fill
                   className="object-cover"
+                  aspectRatio={album.aspectRatio || "3/2"}
+                  priority={true}
                 />
                 {/* Download button for cover image */}
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -653,11 +655,11 @@ export default function AlbumPage({ params }: AlbumPageProps) {
               onClick={() => openFullscreen(image)}
             >
               <div className="relative" style={{ aspectRatio: image.aspectRatio || "3/2" }}>
-                <Image
+                <LazyImage
                   src={image.src}
                   alt={image.alt}
-                  fill
                   className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  aspectRatio={image.aspectRatio || "3/2"}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
@@ -702,11 +704,11 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                   className="group relative overflow-hidden rounded-lg bg-stone-800 transition-all duration-300 hover:scale-105"
                 >
                   <div className="relative" style={{ aspectRatio: otherAlbum.aspectRatio || "3/2" }}>
-                    <Image
+                    <LazyImage
                       src={otherAlbum.coverImage}
                       alt={otherAlbum.description}
-                      fill
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      aspectRatio={otherAlbum.aspectRatio || "3/2"}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-900/90 via-transparent to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-4">
