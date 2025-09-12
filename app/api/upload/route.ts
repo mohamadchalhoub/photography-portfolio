@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { put } from '@vercel/blob'
 import { createClient } from '@supabase/supabase-js'
 
 // Maximum file size: 10MB
@@ -38,29 +37,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads')
-    try {
-      await mkdir(uploadsDir, { recursive: true })
-    } catch (error) {
-      // Directory might already exist, that's okay
-    }
-
     // Generate unique filename
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(2, 15)
     const fileExtension = file.name.split('.').pop()
-    const fileName = `${timestamp}_${randomString}.${fileExtension}`
-    const filePath = join(uploadsDir, fileName)
+    const fileName = `photo_${timestamp}_${randomString}.${fileExtension}`
 
-    // Convert file to buffer and save
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    
-    await writeFile(filePath, buffer)
+    // Upload to Vercel Blob Storage
+    const blob = await put(fileName, file, {
+      access: 'public',
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    })
 
-    // Create file URL path for database storage
-    const fileUrl = `/uploads/${fileName}`
+    // Use the blob URL for database storage
+    const fileUrl = blob.url
 
     // If albumId is provided, save to database
     if (albumId) {
@@ -83,13 +73,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (error) {
-        // If database save fails, clean up the uploaded file
-        try {
-          await import('fs').then(fs => fs.promises.unlink(filePath))
-        } catch (unlinkError) {
-          console.error('Failed to clean up uploaded file:', unlinkError)
-        }
-        
+        console.error('Database save error:', error)
         return NextResponse.json(
           { error: 'Failed to save image to database' },
           { status: 500 }
