@@ -5,6 +5,8 @@ import { Camera, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import LazyImage from "@/components/LazyImage"
+import AlbumSkeleton from "@/components/AlbumSkeleton"
+import LoadingSpinner from "@/components/LoadingSpinner"
 
 // Site content interface
 interface SiteContent {
@@ -209,6 +211,7 @@ const defaultAlbums: PortfolioAlbum[] = [
 
 export default function GalleryPage() {
   const [portfolioAlbums, setPortfolioAlbums] = useState<PortfolioAlbum[]>(defaultAlbums)
+  const [isAlbumsLoading, setIsAlbumsLoading] = useState(true)
   const [siteContent, setSiteContent] = useState<SiteContent | null>(null)
   const totalImages = portfolioAlbums.reduce((total, album) => total + album.images.length, 0)
 
@@ -244,6 +247,7 @@ export default function GalleryPage() {
     if (savedAlbums) {
       setPortfolioAlbums(JSON.parse(savedAlbums))
     }
+    setIsAlbumsLoading(false)
 
     // Listen for storage changes to sync with admin panel updates
     const handleStorageChange = (e: StorageEvent) => {
@@ -318,47 +322,56 @@ export default function GalleryPage() {
 
         {/* Albums Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {portfolioAlbums.map((album) => (
-            <Link
-              key={album.id}
-              href={`/album/${album.id}`}
-              className="group relative overflow-hidden rounded-lg bg-stone-800 transition-all duration-300 hover:scale-105 hover:shadow-2xl"
-            >
-              <div className="relative" style={{ aspectRatio: album.aspectRatio || "3/2" }}>
-                <LazyImage
-                  src={album.coverImage}
-                  alt={album.description}
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
-                  aspectRatio={album.aspectRatio || "3/2"}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-900/90 via-stone-900/20 to-transparent" />
-                
-                {/* Photo count badge */}
-                <div className="absolute top-4 right-4 bg-stone-900/80 backdrop-blur-sm rounded-full px-3 py-1">
-                  <span className="text-xs text-stone-200 font-medium">{album.images.length} photos</span>
-                </div>
+          {isAlbumsLoading ? (
+            <AlbumSkeleton count={6} />
+          ) : portfolioAlbums.length > 0 ? (
+            portfolioAlbums.map((album) => (
+              <Link
+                key={album.id}
+                href={`/album/${album.id}`}
+                className="group relative overflow-hidden rounded-lg bg-stone-800 transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+              >
+                <div className="relative" style={{ aspectRatio: album.aspectRatio || "3/2" }}>
+                  <LazyImage
+                    src={album.coverImage}
+                    alt={album.description}
+                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    aspectRatio={album.aspectRatio || "3/2"}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-stone-900/90 via-stone-900/20 to-transparent" />
+                  
+                  {/* Photo count badge */}
+                  <div className="absolute top-4 right-4 bg-stone-900/80 backdrop-blur-sm rounded-full px-3 py-1">
+                    <span className="text-xs text-stone-200 font-medium">{album.images.length} photos</span>
+                  </div>
 
-                {/* Album info overlay */}
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <div className="transform transition-transform duration-300 group-hover:translate-y-0">
-                    <h3 className="text-2xl font-bold text-stone-100 mb-2">{album.title}</h3>
-                    <p className="text-stone-300 text-sm mb-3 opacity-90">{album.description}</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-amber-500 text-sm font-medium">
-                        {album.location}, {album.year}
-                      </p>
-                      <Button
-                        size="sm"
-                        className="bg-amber-600 hover:bg-amber-700 text-stone-900 font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      >
-                        View Album
-                      </Button>
+                  {/* Album info overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <div className="transform transition-transform duration-300 group-hover:translate-y-0">
+                      <h3 className="text-2xl font-bold text-stone-100 mb-2">{album.title}</h3>
+                      <p className="text-stone-300 text-sm mb-3 opacity-90">{album.description}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-amber-500 text-sm font-medium">
+                          {album.location}, {album.year}
+                        </p>
+                        <Button
+                          size="sm"
+                          className="bg-amber-600 hover:bg-amber-700 text-stone-900 font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        >
+                          View Album
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-16">
+              <LoadingSpinner size="lg" text="No albums found" />
+              <p className="text-stone-400 mt-4">Create your first album in the admin panel</p>
+            </div>
+          )}
         </div>
 
         {/* Call to Action */}

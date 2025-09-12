@@ -2,6 +2,8 @@
 import Image from "next/image"
 import type React from "react"
 import LazyImage from "@/components/LazyImage"
+import AlbumSkeleton from "@/components/AlbumSkeleton"
+import LoadingSpinner from "@/components/LoadingSpinner"
 
 import Link from "next/link"
 import {
@@ -327,6 +329,7 @@ export default function PhotographerPortfolio() {
 
   const [currentLanguage, setCurrentLanguage] = useState<Language>("en")
   const [portfolioAlbums, setPortfolioAlbums] = useState<PortfolioAlbum[]>(defaultAlbums)
+  const [isAlbumsLoading, setIsAlbumsLoading] = useState(true)
   const [siteContentEn, setSiteContentEn] = useState<SiteContent>(defaultContentEn)
   const [siteContentAr, setSiteContentAr] = useState<SiteContent>(defaultContentAr)
   const [isContentLoaded, setIsContentLoaded] = useState(false)
@@ -367,12 +370,14 @@ export default function PhotographerPortfolio() {
   useEffect(() => {
     // Load albums from database first, then fallback to localStorage
     const loadAlbums = async () => {
+      setIsAlbumsLoading(true)
       try {
         const response = await fetch('/api/albums')
         if (response.ok) {
           const albumsFromDB = await response.json()
           if (albumsFromDB.length > 0) {
             setPortfolioAlbums(albumsFromDB)
+            setIsAlbumsLoading(false)
             return // Don't load from localStorage if we have database data
           }
         }
@@ -385,6 +390,7 @@ export default function PhotographerPortfolio() {
       if (savedAlbums) {
         setPortfolioAlbums(JSON.parse(savedAlbums))
       }
+      setIsAlbumsLoading(false)
     }
 
     // Load site content from database with better error handling
@@ -1195,34 +1201,43 @@ export default function PhotographerPortfolio() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {portfolioAlbums.map((album, index) => (
-              <Link
-                key={album.id}
-                href={`/album/${album.id}`}
-                className="group relative overflow-hidden rounded-lg bg-stone-700 cursor-pointer transition-transform duration-300 hover:scale-105"
-              >
-                <div className="relative" style={{ aspectRatio: album.aspectRatio || "3/2" }}>
-                  <LazyImage
-                    src={album.coverImage || "/placeholder.svg"}
-                    alt={album.description}
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    aspectRatio={album.aspectRatio || "3/2"}
-                    priority={index < 3} // Prioritize first 3 images
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="absolute top-4 right-4 bg-stone-900/70 backdrop-blur-sm rounded-full px-3 py-1">
-                    <span className="text-xs text-stone-300">{album.images.length} photos</span>
+            {isAlbumsLoading ? (
+              <AlbumSkeleton count={6} />
+            ) : portfolioAlbums.length > 0 ? (
+              portfolioAlbums.map((album, index) => (
+                <Link
+                  key={album.id}
+                  href={`/album/${album.id}`}
+                  className="group relative overflow-hidden rounded-lg bg-stone-700 cursor-pointer transition-transform duration-300 hover:scale-105"
+                >
+                  <div className="relative" style={{ aspectRatio: album.aspectRatio || "3/2" }}>
+                    <LazyImage
+                      src={album.coverImage || "/placeholder.svg"}
+                      alt={album.description}
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      aspectRatio={album.aspectRatio || "3/2"}
+                      priority={index < 3} // Prioritize first 3 images
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute top-4 right-4 bg-stone-900/70 backdrop-blur-sm rounded-full px-3 py-1">
+                      <span className="text-xs text-stone-300">{album.images.length} photos</span>
+                    </div>
                   </div>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-6 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                  <h3 className="text-xl font-bold text-stone-100 mb-2">{album.title}</h3>
-                  <p className="text-sm text-stone-300 mb-2">{album.description}</p>
-                  <p className="text-sm" style={{ color: "var(--theme-primary)" }}>
-                    {album.location}, {album.year}
-                  </p>
-                </div>
-              </Link>
-            ))}
+                  <div className="absolute bottom-0 left-0 right-0 p-6 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                    <h3 className="text-xl font-bold text-stone-100 mb-2">{album.title}</h3>
+                    <p className="text-sm text-stone-300 mb-2">{album.description}</p>
+                    <p className="text-sm" style={{ color: "var(--theme-primary)" }}>
+                      {album.location}, {album.year}
+                    </p>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center py-16">
+                <LoadingSpinner size="lg" text="No albums found" />
+                <p className="text-stone-400 mt-4">Create your first album in the admin panel</p>
+              </div>
+            )}
           </div>
 
           <div className="text-center mt-12">

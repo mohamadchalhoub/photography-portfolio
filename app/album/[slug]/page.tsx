@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { notFound } from "next/navigation"
 import { useState, useEffect, use } from "react"
 import LazyImage from "@/components/LazyImage"
+import LoadingSpinner from "@/components/LoadingSpinner"
 
 // Site content interface
 interface SiteContent {
@@ -469,10 +470,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-stone-900 text-stone-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-amber-500 mx-auto mb-4"></div>
-          <p className="text-xl text-stone-400">Loading album...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Loading album..." />
       </div>
     )
   }
