@@ -110,16 +110,51 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      id: newAlbum.slug,
-      title: newAlbum.title,
-      description: newAlbum.description,
-      coverImage: newAlbum.cover_image,
-      location: newAlbum.location,
-      year: newAlbum.year,
-      aspectRatio: newAlbum.aspect_ratio,
-      images: albumImages || []
-    })
+    // Fetch the complete album with images from database
+    const { data: completeAlbum, error: fetchError } = await supabase
+      .from('albums')
+      .select(`
+        *,
+        images (*)
+      `)
+      .eq('id', newAlbum.id)
+      .single()
+
+    if (fetchError) {
+      console.error('Failed to fetch complete album:', fetchError)
+      // Return basic album data if fetch fails
+      return NextResponse.json({
+        id: newAlbum.slug,
+        title: newAlbum.title,
+        description: newAlbum.description,
+        coverImage: newAlbum.cover_image,
+        location: newAlbum.location,
+        year: newAlbum.year,
+        aspectRatio: newAlbum.aspect_ratio,
+        images: albumImages || []
+      })
+    }
+
+    // Format the complete album data
+    const formattedAlbum = {
+      id: completeAlbum.slug,
+      title: completeAlbum.title,
+      description: completeAlbum.description,
+      coverImage: completeAlbum.cover_image,
+      location: completeAlbum.location,
+      year: completeAlbum.year,
+      aspectRatio: completeAlbum.aspect_ratio,
+      images: completeAlbum.images?.map((image: any) => ({
+        id: image.id.toString(),
+        src: image.src,
+        alt: image.alt,
+        title: image.title,
+        location: image.location,
+        aspectRatio: image.aspect_ratio
+      })) || []
+    }
+
+    return NextResponse.json(formattedAlbum)
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to create album' },

@@ -851,27 +851,33 @@ export default function PhotographerPortfolio() {
             alert(`Failed to upload cover image: ${error.message}`)
           }
         } else if (field === 'newPhoto') {
-          // For new photos, upload to server if album exists in database
-          if (!isCreatingNewAlbum && editingAlbum.id) {
-            try {
-              const formData = new FormData()
-              formData.append('file', file)
+          // Always upload the file immediately, regardless of whether album exists in database
+          try {
+            const formData = new FormData()
+            formData.append('file', file)
+            
+            // If album exists in database, include albumId for immediate database save
+            if (!isCreatingNewAlbum && editingAlbum.id) {
               formData.append('albumId', editingAlbum.id.toString())
+            }
 
-              const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
-              })
+            const response = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            })
 
-              if (response.ok) {
-                const uploadedImage = await response.json()
+            if (response.ok) {
+              const uploadResult = await response.json()
+              
+              if (!isCreatingNewAlbum && editingAlbum.id) {
+                // Album exists in database - image is already saved to database
                 const newPhoto: PortfolioImage = {
-                  id: uploadedImage.id.toString(),
-                  src: uploadedImage.src,
-                  alt: uploadedImage.alt,
-                  title: uploadedImage.title,
-                  location: uploadedImage.location,
-                  aspectRatio: uploadedImage.aspectRatio
+                  id: uploadResult.id.toString(),
+                  src: uploadResult.src,
+                  alt: uploadResult.alt,
+                  title: uploadResult.title,
+                  location: uploadResult.location,
+                  aspectRatio: uploadResult.aspectRatio
                 }
                 setEditingAlbum(prev => prev ? {
                   ...prev,
@@ -879,27 +885,28 @@ export default function PhotographerPortfolio() {
                 } : null)
                 alert("Photo uploaded and saved to database!")
               } else {
-                const errorData = await response.json()
-                throw new Error(errorData.error || "Failed to upload photo")
+                // New album - image uploaded but not yet saved to database
+                // Store the upload result for when the album is created
+                const newPhoto: PortfolioImage = {
+                  id: `temp-${Date.now()}`,
+                  src: uploadResult.url, // This is the file path from upload
+                  alt: `Photo from ${editingAlbum.title}`,
+                  title: `${editingAlbum.title} Photo`,
+                  location: `${editingAlbum.location}, ${editingAlbum.year}`,
+                  aspectRatio: editingAlbum.aspectRatio
+                }
+                setEditingAlbum(prev => prev ? {
+                  ...prev,
+                  images: [...prev.images, newPhoto]
+                } : null)
+                alert("Photo uploaded! It will be saved to database when you create the album.")
               }
-            } catch (error) {
-              alert(`Failed to upload photo: ${error.message}`)
+            } else {
+              const errorData = await response.json()
+              throw new Error(errorData.error || "Failed to upload photo")
             }
-          } else {
-            // For new albums, create a preview URL and save locally until album is created
-            const previewUrl = URL.createObjectURL(file)
-            const newPhoto: PortfolioImage = {
-              id: `photo-${Date.now()}`,
-              src: previewUrl,
-              alt: `Photo from ${editingAlbum.title}`,
-              title: `${editingAlbum.title} Photo`,
-              location: `${editingAlbum.location}, ${editingAlbum.year}`,
-              aspectRatio: editingAlbum.aspectRatio
-            }
-            setEditingAlbum(prev => prev ? {
-              ...prev,
-              images: [...prev.images, newPhoto]
-            } : null)
+          } catch (error) {
+            alert(`Failed to upload photo: ${error.message}`)
           }
         }
       } catch (error) {
