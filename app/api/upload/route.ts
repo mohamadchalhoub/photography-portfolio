@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: `File size exceeds 10MB limit. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB` },
+        { error: `File too large, must be under 10 MB. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB` },
         { status: 400 }
       )
     }
@@ -43,10 +43,11 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.split('.').pop()
     const fileName = `photo_${timestamp}_${randomString}.${fileExtension}`
 
-    // Upload to Vercel Blob Storage
+    // Upload to Vercel Blob Storage bucket named "photos"
     const blob = await put(fileName, file, {
       access: 'public',
       token: process.env.BLOB_READ_WRITE_TOKEN,
+      addRandomSuffix: false, // We're already generating unique filenames
     })
 
     // Use the blob URL for database storage

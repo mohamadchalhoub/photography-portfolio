@@ -824,7 +824,7 @@ export default function PhotographerPortfolio() {
         // Validate file size (10MB limit)
         const maxSize = 10 * 1024 * 1024 // 10MB
         if (file.size > maxSize) {
-          alert(`File size exceeds 10MB limit. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
+          alert(`File too large, must be under 10 MB. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
           return
         }
 
