@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Camera, ArrowLeft, Download, Share, Copy, Check, Facebook, Twitter, Linkedin, Mail, MessageCircle, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { notFound } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import LazyImage from "@/components/LazyImage"
 
 // Site content interface
@@ -209,12 +209,13 @@ const defaultAlbums: PortfolioAlbum[] = [
 ]
 
 interface AlbumPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 export default function AlbumPage({ params }: AlbumPageProps) {
+  const resolvedParams = use(params)
   const [portfolioAlbums, setPortfolioAlbums] = useState<PortfolioAlbum[]>(defaultAlbums)
   const [album, setAlbum] = useState<PortfolioAlbum | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -272,7 +273,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
     }
 
     // Find the specific album
-    const foundAlbum = albumsToUse.find((album) => album.id === params.slug)
+    const foundAlbum = albumsToUse.find((album) => album.id === resolvedParams.slug)
     
     setAlbum(foundAlbum || null)
     setIsLoading(false)
@@ -282,7 +283,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
       if (e.key === "portfolioAlbums" && e.newValue) {
         const updatedAlbums = JSON.parse(e.newValue)
         setPortfolioAlbums(updatedAlbums)
-        const updatedAlbum = updatedAlbums.find((album: PortfolioAlbum) => album.id === params.slug)
+        const updatedAlbum = updatedAlbums.find((album: PortfolioAlbum) => album.id === resolvedParams.slug)
         setAlbum(updatedAlbum || null)
       }
     }
@@ -295,7 +296,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
       if (savedAlbums) {
         const updatedAlbums = JSON.parse(savedAlbums)
         setPortfolioAlbums(updatedAlbums)
-        const updatedAlbum = updatedAlbums.find((album: PortfolioAlbum) => album.id === params.slug)
+        const updatedAlbum = updatedAlbums.find((album: PortfolioAlbum) => album.id === resolvedParams.slug)
         setAlbum(updatedAlbum || null)
       }
     }
@@ -306,7 +307,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
       window.removeEventListener("storage", handleStorageChange)
       window.removeEventListener("portfolioAlbumsUpdated", handleCustomStorageChange)
     }
-  }, [params.slug])
+  }, [resolvedParams.slug])
 
   // Close share menu when clicking outside
   useEffect(() => {
