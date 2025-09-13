@@ -835,36 +835,47 @@ export default function PhotographerPortfolio() {
           return
         }
 
-        // Step 1: Upload file directly to our API
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const uploadResponse = await fetch('/api/upload-url', {
+        // Step 1: Get upload URL and metadata from our API
+        const uploadUrlResponse = await fetch('/api/upload-url', {
           method: 'POST',
-          body: formData,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+          }),
         })
 
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json()
-          throw new Error(errorData.message || errorData.error || 'Failed to upload file')
+        if (!uploadUrlResponse.ok) {
+          const errorData = await uploadUrlResponse.json()
+          throw new Error(errorData.message || errorData.error || 'Failed to get upload URL')
         }
 
-        const responseData = await uploadResponse.json()
+        const responseData = await uploadUrlResponse.json()
         
         if (!responseData.success) {
-          throw new Error(responseData.message || 'Failed to upload file')
+          throw new Error(responseData.message || 'Failed to get upload URL')
         }
 
-        const { url, filename: uniqueFilename } = responseData
+        const { uploadUrl, filename: uniqueFilename, token } = responseData
 
-        // Step 2: Save image metadata
+        // Step 2: Upload file directly to Vercel Blob using client-side upload
+        const { upload } = await import('@vercel/blob/client')
+        const blob = await upload(uniqueFilename, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload-url',
+        })
+
+        // Step 3: Save image metadata
         const saveResponse = await fetch('/api/save-image', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            uploadUrl: url,
+            uploadUrl: blob.url,
             filename: uniqueFilename,
             originalFilename: file.name,
             contentType: file.type,

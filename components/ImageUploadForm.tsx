@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Upload, X, CheckCircle, AlertCircle, Image as ImageIcon } from "lucide-react"
+import { upload } from "@vercel/blob/client"
 
 interface UploadResponse {
   url: string
@@ -84,38 +85,54 @@ export default function ImageUploadForm({
     setSuccessMessage('')
 
     try {
-      // Step 1: Upload file directly to our API
-      setUploadProgress(20)
-      const formData = new FormData()
-      formData.append('file', selectedFile)
-
-      const uploadResponse = await fetch('/api/upload-url', {
+      // Step 1: Get upload URL and metadata from our API
+      setUploadProgress(10)
+      const uploadUrlResponse = await fetch('/api/upload-url', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: selectedFile.name,
+          size: selectedFile.size,
+          type: selectedFile.type,
+        }),
       })
 
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json()
-        throw new Error(errorData.message || errorData.error || 'Failed to upload file')
+      if (!uploadUrlResponse.ok) {
+        const errorData = await uploadUrlResponse.json()
+        throw new Error(errorData.message || errorData.error || 'Failed to get upload URL')
       }
 
-      const responseData = await uploadResponse.json()
+      const responseData = await uploadUrlResponse.json()
       
       if (!responseData.success) {
-        throw new Error(responseData.message || 'Failed to upload file')
+        throw new Error(responseData.message || 'Failed to get upload URL')
       }
 
-      const { url, filename: uniqueFilename } = responseData
+      const { uploadUrl, filename: uniqueFilename, token } = responseData
+      setUploadProgress(20)
+
+      // Step 2: Upload file directly to Vercel Blob using client-side upload
+      setUploadProgress(30)
+      const blob = await upload(uniqueFilename, selectedFile, {
+        access: 'public',
+        handleUploadUrl: '/api/upload-url',
+        onUploadProgress: ({ percentage }) => {
+          setUploadProgress(30 + (percentage * 0.5)) // 30% to 80%
+        },
+      })
+
       setUploadProgress(80)
 
-      // Step 2: Save image metadata to database
+      // Step 3: Save image metadata to database
       const saveResponse = await fetch('/api/save-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uploadUrl: url,
+          uploadUrl: blob.url,
           filename: uniqueFilename,
           originalFilename: selectedFile.name,
           contentType: selectedFile.type,
@@ -234,7 +251,8 @@ export default function ImageUploadForm({
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-stone-400">
               <span>
-                {uploadProgress < 80 ? 'Uploading file...' :
+                {uploadProgress < 20 ? 'Preparing upload...' :
+                 uploadProgress < 80 ? 'Uploading to storage...' :
                  'Saving metadata...'}
               </span>
               <span>{uploadProgress}%</span>
