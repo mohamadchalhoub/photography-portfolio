@@ -84,55 +84,38 @@ export default function ImageUploadForm({
     setSuccessMessage('')
 
     try {
-      // Step 1: Get upload URL from our API
-      setUploadProgress(10)
-      const uploadUrlResponse = await fetch('/api/upload-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: selectedFile.name,
-        }),
-      })
-
-      if (!uploadUrlResponse.ok) {
-        const errorData = await uploadUrlResponse.json()
-        throw new Error(errorData.message || errorData.error || 'Failed to generate upload URL')
-      }
-
-      const responseData = await uploadUrlResponse.json()
-      
-      if (!responseData.success) {
-        throw new Error(responseData.message || 'Failed to generate upload URL')
-      }
-
-      const { uploadUrl, filename: uniqueFilename } = responseData
+      // Step 1: Upload file directly to our API
       setUploadProgress(20)
+      const formData = new FormData()
+      formData.append('file', selectedFile)
 
-      // Step 2: Upload directly to Vercel Blob Storage
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: selectedFile,
-        headers: {
-          'Content-Type': selectedFile.type,
-        },
+      const uploadResponse = await fetch('/api/upload-url', {
+        method: 'POST',
+        body: formData,
       })
 
       if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file to storage')
+        const errorData = await uploadResponse.json()
+        throw new Error(errorData.message || errorData.error || 'Failed to upload file')
       }
 
+      const responseData = await uploadResponse.json()
+      
+      if (!responseData.success) {
+        throw new Error(responseData.message || 'Failed to upload file')
+      }
+
+      const { url, filename: uniqueFilename } = responseData
       setUploadProgress(80)
 
-      // Step 3: Save image metadata to database
+      // Step 2: Save image metadata to database
       const saveResponse = await fetch('/api/save-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uploadUrl,
+          uploadUrl: url,
           filename: uniqueFilename,
           originalFilename: selectedFile.name,
           contentType: selectedFile.type,
@@ -251,8 +234,7 @@ export default function ImageUploadForm({
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-stone-400">
               <span>
-                {uploadProgress < 20 ? 'Preparing upload...' :
-                 uploadProgress < 80 ? 'Uploading to storage...' :
+                {uploadProgress < 80 ? 'Uploading file...' :
                  'Saving metadata...'}
               </span>
               <span>{uploadProgress}%</span>
