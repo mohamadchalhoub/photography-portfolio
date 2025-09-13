@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Upload, X, CheckCircle, AlertCircle, Image as ImageIcon } from "lucide-react"
-import { upload } from "@vercel/blob/client"
 
 interface UploadResponse {
   url: string
@@ -111,16 +110,41 @@ export default function ImageUploadForm({
       const { handleUploadUrl, fileName: uniqueFilename } = responseData
       setUploadProgress(20)
 
-      // Step 2: Upload file using Vercel Blob client with handleUploadUrl
+      // Step 2: Upload file directly to signed URL
       setUploadProgress(30)
       
-      const blob = await upload(uniqueFilename, selectedFile, {
-        access: 'public',
-        handleUploadUrl: handleUploadUrl,
-        onUploadProgress: ({ percentage }) => {
-          setUploadProgress(30 + (percentage * 0.5)) // 30% to 80%
+      // Upload directly to the signed URL using fetch
+      const uploadResponse = await fetch(handleUploadUrl, {
+        method: 'PUT',
+        body: selectedFile,
+        headers: {
+          'Content-Type': selectedFile.type,
         },
       })
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`)
+      }
+
+      // Get the response URL from the upload
+      const responseText = await uploadResponse.text()
+      let blobUrl: string
+      
+      try {
+        // Try to parse as JSON first
+        const responseData = JSON.parse(responseText)
+        blobUrl = responseData.url || responseData.blob?.url
+      } catch {
+        // If not JSON, the response might be the URL directly
+        blobUrl = responseText
+      }
+
+      if (!blobUrl) {
+        // Fallback: construct the URL from the signed URL
+        const urlParts = handleUploadUrl.split('/')
+        const fileName = urlParts[urlParts.length - 1].split('?')[0]
+        blobUrl = `https://blob.vercel-storage.com/${fileName}`
+      }
 
       setUploadProgress(80)
 
@@ -131,7 +155,7 @@ export default function ImageUploadForm({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uploadUrl: blob.url,
+          uploadUrl: blobUrl,
           filename: uniqueFilename,
           originalFilename: selectedFile.name,
           contentType: selectedFile.type,

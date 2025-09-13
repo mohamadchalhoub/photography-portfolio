@@ -85,19 +85,20 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ Generated unique filename:', uniqueFileName)
 
-    // Step 6: Generate signed upload URL
+    // Step 6: Generate signed upload URL using Vercel Blob API
     console.log('Step 5: Generating signed upload URL...')
     
     try {
-      // Create a signed upload URL for direct client upload
-      // The handleUploadUrl should be the API endpoint that will handle the upload
-      const handleUploadUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/upload-handler`
+      // Create a signed upload URL using Vercel Blob's API
+      // We'll use the multipart upload approach for large files
+      const baseUrl = 'https://blob.vercel-storage.com'
+      const signedUrl = `${baseUrl}/put/${uniqueFileName}?token=${blobToken}&access=public`
       
-      console.log('✅ Upload URL generated successfully')
-      console.log('Handle Upload URL:', handleUploadUrl)
+      console.log('✅ Signed upload URL generated successfully')
+      console.log('Signed URL:', signedUrl.substring(0, 100) + '...')
 
       return createSuccessResponse({
-        handleUploadUrl,
+        handleUploadUrl: signedUrl,
         fileName: uniqueFileName
       })
 

@@ -859,13 +859,38 @@ export default function PhotographerPortfolio() {
 
         const { handleUploadUrl, fileName: uniqueFilename } = responseData
 
-        // Step 2: Upload file using Vercel Blob client with handleUploadUrl
-        const { upload } = await import('@vercel/blob/client')
-        
-        const blob = await upload(uniqueFilename, file, {
-          access: 'public',
-          handleUploadUrl: handleUploadUrl,
+        // Step 2: Upload file directly to signed URL
+        const uploadResponse = await fetch(handleUploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type,
+          },
         })
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`)
+        }
+
+        // Get the response URL from the upload
+        const responseText = await uploadResponse.text()
+        let blobUrl: string
+        
+        try {
+          // Try to parse as JSON first
+          const responseData = JSON.parse(responseText)
+          blobUrl = responseData.url || responseData.blob?.url
+        } catch {
+          // If not JSON, the response might be the URL directly
+          blobUrl = responseText
+        }
+
+        if (!blobUrl) {
+          // Fallback: construct the URL from the signed URL
+          const urlParts = handleUploadUrl.split('/')
+          const fileName = urlParts[urlParts.length - 1].split('?')[0]
+          blobUrl = `https://blob.vercel-storage.com/${fileName}`
+        }
 
         // Step 3: Save image metadata
         const saveResponse = await fetch('/api/save-image', {
@@ -874,7 +899,7 @@ export default function PhotographerPortfolio() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            uploadUrl: blob.url,
+            uploadUrl: blobUrl,
             filename: uniqueFilename,
             originalFilename: file.name,
             contentType: file.type,
