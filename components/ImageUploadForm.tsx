@@ -84,62 +84,66 @@ export default function ImageUploadForm({
     setSuccessMessage('')
 
     try {
-      // Create FormData
-      const formData = new FormData()
-      formData.append('file', selectedFile)
-      if (albumId) {
-        formData.append('albumId', albumId)
-      }
-
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval)
-            return prev
-          }
-          return prev + 10
-        })
-      }, 200)
-
-      // Upload file
-      const response = await fetch('/api/upload', {
+      // Step 1: Get upload URL from our API
+      setUploadProgress(10)
+      const uploadUrlResponse = await fetch('/api/upload-url', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename: selectedFile.name,
+          contentType: selectedFile.type,
+          size: selectedFile.size,
+        }),
       })
 
-      clearInterval(progressInterval)
+      if (!uploadUrlResponse.ok) {
+        const errorData = await uploadUrlResponse.json()
+        throw new Error(errorData.error || 'Failed to get upload URL')
+      }
+
+      const { url: uploadUrl, filename: uniqueFilename } = await uploadUrlResponse.json()
+      setUploadProgress(20)
+
+      // Step 2: Upload directly to Vercel Blob Storage
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: selectedFile,
+        headers: {
+          'Content-Type': selectedFile.type,
+        },
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload file to storage')
+      }
+
+      setUploadProgress(80)
+
+      // Step 3: Save image metadata to database
+      const saveResponse = await fetch('/api/save-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: uploadUrl,
+          filename: uniqueFilename,
+          originalFilename: selectedFile.name,
+          contentType: selectedFile.type,
+          size: selectedFile.size,
+          albumId: albumId,
+        }),
+      })
+
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json()
+        throw new Error(errorData.error || 'Failed to save image metadata')
+      }
+
+      const result = await saveResponse.json()
       setUploadProgress(100)
-
-      if (!response.ok) {
-        // Try to parse JSON error response
-        let errorMessage = 'Upload failed'
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.error || errorMessage
-        } catch (parseError) {
-          // If JSON parsing fails, check status code for specific errors
-          if (response.status === 413) {
-            errorMessage = 'File too large. Please try a smaller image (under 10MB).'
-          } else if (response.status === 401) {
-            errorMessage = 'Unauthorized. Please log in as admin.'
-          } else if (response.status === 400) {
-            errorMessage = 'Invalid file. Please check file type and size.'
-          } else {
-            errorMessage = `Upload failed with status ${response.status}`
-          }
-        }
-        throw new Error(errorMessage)
-      }
-
-      // Parse JSON response with additional error handling
-      let result
-      try {
-        result = await response.json()
-      } catch (jsonError) {
-        console.error('JSON parsing error:', jsonError)
-        throw new Error('Server returned invalid response. Please try again.')
-      }
       
       setUploadStatus('success')
       setSuccessMessage(albumId ? 'Image uploaded and added to album successfully!' : 'Image uploaded successfully!')
@@ -242,7 +246,11 @@ export default function ImageUploadForm({
         {isUploading && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-stone-400">
-              <span>Uploading...</span>
+              <span>
+                {uploadProgress < 20 ? 'Preparing upload...' :
+                 uploadProgress < 80 ? 'Uploading to storage...' :
+                 'Saving metadata...'}
+              </span>
               <span>{uploadProgress}%</span>
             </div>
             <Progress value={uploadProgress} className="h-2" />

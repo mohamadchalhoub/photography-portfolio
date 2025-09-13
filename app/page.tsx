@@ -835,84 +835,96 @@ export default function PhotographerPortfolio() {
           return
         }
 
+        // Step 1: Get upload URL
+        const uploadUrlResponse = await fetch('/api/upload-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+            size: file.size,
+          }),
+        })
+
+        if (!uploadUrlResponse.ok) {
+          const errorData = await uploadUrlResponse.json()
+          throw new Error(errorData.error || 'Failed to get upload URL')
+        }
+
+        const { url: uploadUrl, filename: uniqueFilename } = await uploadUrlResponse.json()
+
+        // Step 2: Upload directly to Vercel Blob Storage
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type,
+          },
+        })
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload file to storage')
+        }
+
+        // Step 3: Save image metadata
+        const saveResponse = await fetch('/api/save-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: uploadUrl,
+            filename: uniqueFilename,
+            originalFilename: file.name,
+            contentType: file.type,
+            size: file.size,
+            albumId: (!isCreatingNewAlbum && editingAlbum.id) ? editingAlbum.id.toString() : null,
+          }),
+        })
+
+        if (!saveResponse.ok) {
+          const errorData = await saveResponse.json()
+          throw new Error(errorData.error || 'Failed to save image metadata')
+        }
+
+        const uploadResult = await saveResponse.json()
+
         if (field === 'coverImage') {
-          // For cover image, upload and get URL
-          const formData = new FormData()
-          formData.append('file', file)
-
-          try {
-            const response = await fetch('/api/upload', {
-              method: 'POST',
-              body: formData,
-            })
-
-            if (response.ok) {
-              const uploadResult = await response.json()
-              setEditingAlbum(prev => prev ? { ...prev, coverImage: uploadResult.url } : null)
-            } else {
-              const errorData = await response.json()
-              throw new Error(errorData.error || 'Upload failed')
-            }
-          } catch (error) {
-            alert(`Failed to upload cover image: ${error.message}`)
-          }
+          setEditingAlbum(prev => prev ? { ...prev, coverImage: uploadResult.url || uploadResult.src } : null)
         } else if (field === 'newPhoto') {
-          // Always upload the file immediately, regardless of whether album exists in database
-          try {
-            const formData = new FormData()
-            formData.append('file', file)
-            
-            // If album exists in database, include albumId for immediate database save
-            if (!isCreatingNewAlbum && editingAlbum.id) {
-              formData.append('albumId', editingAlbum.id.toString())
+          if (!isCreatingNewAlbum && editingAlbum.id) {
+            // Album exists in database - image is already saved to database
+            const newPhoto: PortfolioImage = {
+              id: uploadResult.id.toString(),
+              src: uploadResult.src,
+              alt: uploadResult.alt,
+              title: uploadResult.title,
+              location: uploadResult.location,
+              aspectRatio: uploadResult.aspectRatio
             }
-
-            const response = await fetch('/api/upload', {
-              method: 'POST',
-              body: formData,
-            })
-
-            if (response.ok) {
-              const uploadResult = await response.json()
-              
-              if (!isCreatingNewAlbum && editingAlbum.id) {
-                // Album exists in database - image is already saved to database
-                const newPhoto: PortfolioImage = {
-                  id: uploadResult.id.toString(),
-                  src: uploadResult.src,
-                  alt: uploadResult.alt,
-                  title: uploadResult.title,
-                  location: uploadResult.location,
-                  aspectRatio: uploadResult.aspectRatio
-                }
-                setEditingAlbum(prev => prev ? {
-                  ...prev,
-                  images: [...prev.images, newPhoto]
-                } : null)
-                alert("Photo uploaded and saved to database!")
-              } else {
-                // New album - image uploaded but not yet saved to database
-                // Store the upload result for when the album is created
-                const newPhoto: PortfolioImage = {
-                  id: `temp-${Date.now()}`,
-                  src: uploadResult.url, // This is the file path from upload
-                  alt: `Photo from ${editingAlbum.title}`,
-                  title: `${editingAlbum.title} Photo`,
-                  location: `${editingAlbum.location}, ${editingAlbum.year}`,
-                  aspectRatio: editingAlbum.aspectRatio
-                }
-                setEditingAlbum(prev => prev ? {
-                  ...prev,
-                  images: [...prev.images, newPhoto]
-                } : null)
-                alert("Photo uploaded! It will be saved to database when you create the album.")
-              }
-            } else {
-              const errorData = await response.json()
-              throw new Error(errorData.error || "Failed to upload photo")
+            setEditingAlbum(prev => prev ? {
+              ...prev,
+              images: [...prev.images, newPhoto]
+            } : null)
+            alert("Photo uploaded and saved to database!")
+          } else {
+            // New album - image uploaded but not yet saved to database
+            // Store the upload result for when the album is created
+            const newPhoto: PortfolioImage = {
+              id: `temp-${Date.now()}`,
+              src: uploadResult.url || uploadResult.src, // This is the file path from upload
+              alt: `Photo from ${editingAlbum.title}`,
+              title: `${editingAlbum.title} Photo`,
+              location: `${editingAlbum.location}, ${editingAlbum.year}`,
+              aspectRatio: editingAlbum.aspectRatio
             }
-          } catch (error) {
-            alert(`Failed to upload photo: ${error.message}`)
+            setEditingAlbum(prev => prev ? {
+              ...prev,
+              images: [...prev.images, newPhoto]
+            } : null)
+            alert("Photo uploaded! It will be saved to database when you create the album.")
           }
         }
       } catch (error) {
