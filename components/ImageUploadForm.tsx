@@ -132,7 +132,14 @@ export default function ImageUploadForm({
         throw new Error(errorMessage)
       }
 
-      const result = await response.json()
+      // Parse JSON response with additional error handling
+      let result
+      try {
+        result = await response.json()
+      } catch (jsonError) {
+        console.error('JSON parsing error:', jsonError)
+        throw new Error('Server returned invalid response. Please try again.')
+      }
       
       setUploadStatus('success')
       setSuccessMessage(albumId ? 'Image uploaded and added to album successfully!' : 'Image uploaded successfully!')

@@ -13,6 +13,14 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
+// Disable Next.js body parsing to handle large files with Formidable
+export const config = {
+  api: {
+    bodyParser: false,
+    sizeLimit: '10mb'
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication - only admins can upload
@@ -129,7 +137,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Upload error:', error)
     
-    // Handle specific error types
+    // Handle specific errors and ensure we always return JSON
     if (error instanceof Error) {
       if (error.message.includes('413') || error.message.includes('Payload Too Large')) {
         return NextResponse.json(
@@ -145,6 +153,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Always return JSON, never let HTML error pages through
     return NextResponse.json(
       { error: 'Failed to upload file. Please try again.' },
       { status: 500 }
