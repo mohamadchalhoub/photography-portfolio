@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { uploadUrl, pathname, filename, originalFilename, contentType, size, albumId } = await request.json()
+    const { uploadUrl, filename, originalFilename, contentType, size, albumId } = await request.json()
 
     if (!uploadUrl || !filename) {
       return NextResponse.json(
@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the public URL from the pathname
-    const publicUrl = `https://${process.env.BLOB_READ_WRITE_TOKEN?.split('.')[0]}.public.blob.vercel-storage.com${pathname}`
+    // The uploadUrl is already the public URL after successful upload
+    const publicUrl = uploadUrl
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
