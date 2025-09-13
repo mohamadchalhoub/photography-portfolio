@@ -94,8 +94,6 @@ export default function ImageUploadForm({
         },
         body: JSON.stringify({
           name: selectedFile.name,
-          size: selectedFile.size,
-          type: selectedFile.type,
         }),
       })
 
@@ -110,21 +108,15 @@ export default function ImageUploadForm({
         throw new Error(responseData.message || 'Failed to get upload URL')
       }
 
-      const { uploadUrl, filename: uniqueFilename } = responseData
+      const { handleUploadUrl, fileName: uniqueFilename } = responseData
       setUploadProgress(20)
 
-      // Step 2: Upload file directly to Vercel Blob using client-side upload
+      // Step 2: Upload file using Vercel Blob client with handleUploadUrl
       setUploadProgress(30)
-      
-      // Check if token is available
-      const blobToken = process.env.NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN
-      if (!blobToken) {
-        throw new Error('Invalid or missing client token')
-      }
       
       const blob = await upload(uniqueFilename, selectedFile, {
         access: 'public',
-        token: blobToken,
+        handleUploadUrl: handleUploadUrl,
         onUploadProgress: ({ percentage }) => {
           setUploadProgress(30 + (percentage * 0.5)) // 30% to 80%
         },

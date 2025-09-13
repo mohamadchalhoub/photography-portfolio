@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 
-// Disable Next.js body parsing for this route
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
 // Maximum file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
 
@@ -47,66 +40,43 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Check environment variables
     console.log('Step 2: Checking environment variables...')
-    const blobToken = process.env.NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN
     
     if (!blobToken) {
-      console.error('❌ NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN environment variable is not set')
-      return createErrorResponse('Server configuration error: NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN not found', 500)
+      console.error('❌ BLOB_READ_WRITE_TOKEN environment variable is not set')
+      return createErrorResponse('Server configuration error: BLOB_READ_WRITE_TOKEN not found', 500)
     }
 
     if (blobToken.length < 10) {
-      console.error('❌ NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN appears to be invalid (too short):', blobToken.length)
-      return createErrorResponse('Server configuration error: Invalid NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN', 500)
+      console.error('❌ BLOB_READ_WRITE_TOKEN appears to be invalid (too short):', blobToken.length)
+      return createErrorResponse('Server configuration error: Invalid BLOB_READ_WRITE_TOKEN', 500)
     }
 
     console.log('✅ Environment variables validated - token length:', blobToken.length)
 
-    // Step 3: Parse JSON request body (not form data)
+    // Step 3: Parse JSON request body
     console.log('Step 3: Parsing JSON request body...')
-    let requestBody: { name?: string, size?: number, type?: string }
+    let requestBody: { name?: string }
     
     try {
       requestBody = await request.json()
       console.log('✅ Request body parsed successfully:', requestBody)
     } catch (parseError) {
       console.error('❌ JSON parse error:', parseError)
-      return createErrorResponse('Invalid JSON in request body. Expected: { "name": "filename.jpg", "size": 12345, "type": "image/jpeg" }', 400)
+      return createErrorResponse('Invalid JSON in request body. Expected: { "name": "filename.jpg" }', 400)
     }
 
     // Step 4: Validate request body
-    const { name, size, type } = requestBody
+    const { name } = requestBody
     
     if (!name || typeof name !== 'string' || name.trim() === '') {
       console.log('❌ Invalid filename:', name)
       return createErrorResponse('Missing or invalid filename. Expected a non-empty string.', 400)
     }
 
-    if (!size || typeof size !== 'number' || size <= 0) {
-      console.log('❌ Invalid file size:', size)
-      return createErrorResponse('Missing or invalid file size. Expected a positive number.', 400)
-    }
+    console.log('✅ Filename validation passed:', name)
 
-    if (!type || typeof type !== 'string' || type.trim() === '') {
-      console.log('❌ Invalid file type:', type)
-      return createErrorResponse('Missing or invalid file type. Expected a MIME type string.', 400)
-    }
-
-    // Step 5: Validate file size (server-side validation as backup)
-    if (size > MAX_FILE_SIZE) {
-      console.log('❌ File too large:', size, 'Max allowed:', MAX_FILE_SIZE)
-      return createErrorResponse(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`, 400)
-    }
-
-    // Step 6: Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!allowedTypes.includes(type)) {
-      console.log('❌ Invalid file type:', type)
-      return createErrorResponse(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`, 400)
-    }
-
-    console.log('✅ File validation passed')
-
-    // Step 7: Generate unique filename
+    // Step 5: Generate unique filename
     console.log('Step 4: Generating unique filename...')
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(2, 15)
@@ -115,23 +85,20 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ Generated unique filename:', uniqueFileName)
 
-    // Step 8: Generate signed upload URL using Vercel Blob
+    // Step 6: Generate signed upload URL
     console.log('Step 5: Generating signed upload URL...')
     
     try {
-      // Since createUploadUrl doesn't exist, we'll use a different approach
-      // We'll return the necessary information for client-side upload
-      const uploadUrl = `https://blob.vercel-storage.com/put/${uniqueFileName}`
+      // Create a signed upload URL for direct client upload
+      // The handleUploadUrl should be the API endpoint that will handle the upload
+      const handleUploadUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/upload-handler`
       
       console.log('✅ Upload URL generated successfully')
-      console.log('Upload URL:', uploadUrl)
+      console.log('Handle Upload URL:', handleUploadUrl)
 
       return createSuccessResponse({
-        uploadUrl,
-        filename: uniqueFileName,
-        originalFilename: name,
-        maxSize: MAX_FILE_SIZE,
-        bucket: 'photos'
+        handleUploadUrl,
+        fileName: uniqueFileName
       })
 
     } catch (blobError) {
