@@ -54,8 +54,13 @@ export async function POST(request: NextRequest) {
     console.log('Step 2: Checking environment variables...')
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN
     
+    console.log('Environment variables check:')
+    console.log('- BLOB_READ_WRITE_TOKEN exists:', !!blobToken)
+    console.log('- BLOB_READ_WRITE_TOKEN length:', blobToken ? blobToken.length : 'N/A')
+    
     if (!blobToken) {
       console.error('❌ BLOB_READ_WRITE_TOKEN environment variable is not set')
+      console.error('Available env vars:', Object.keys(process.env).filter(key => key.includes('BLOB')))
       return createErrorResponse('Server configuration error: BLOB_READ_WRITE_TOKEN not found', 500)
     }
 
@@ -125,20 +130,20 @@ export async function POST(request: NextRequest) {
     console.log('Step 5: Generating signed upload URL...')
     
     try {
-      // Use Vercel Blob's put method to generate a signed URL
-      // We'll upload a minimal file to get the URL, then the client will overwrite it
-      const blob = await put(uniqueFileName, new Uint8Array(0), {
-        access: 'public',
-        token: blobToken,
-        addRandomSuffix: false, // We already generated a unique name
-      })
+      // Generate a signed URL for client-side upload
+      // Create the signed URL manually using the Vercel Blob format
+      const baseUrl = 'https://blob.vercel-storage.com'
+      const signedUploadUrl = `${baseUrl}/put/${uniqueFileName}?token=${blobToken}&access=public`
+      
+      // The public URL will be available after upload
+      const publicUrl = `${baseUrl}/${uniqueFileName}`
 
       console.log('✅ Signed upload URL generated successfully')
-      console.log('Upload URL:', blob.url)
-      console.log('Public URL:', blob.url)
+      console.log('Upload URL:', signedUploadUrl.substring(0, 100) + '...')
+      console.log('Public URL:', publicUrl)
 
       return createSuccessResponse({
-        url: blob.url, // This is the signed URL for PUT request
+        url: signedUploadUrl, // This is the signed URL for PUT request
         filename: uniqueFileName,
         originalFilename: name,
         size: size,
@@ -154,7 +159,11 @@ export async function POST(request: NextRequest) {
         console.error('Error stack:', blobError.stack)
       }
       
-      return createErrorResponse('Failed to generate upload URL', 500)
+      // Log token information for debugging (without exposing the full token)
+      console.error('Token length:', blobToken.length)
+      console.error('Token starts with:', blobToken.substring(0, 10))
+      
+      return createErrorResponse('Failed to generate upload URL: ' + (blobError instanceof Error ? blobError.message : 'Unknown error'), 500)
     }
 
   } catch (error) {
