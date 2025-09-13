@@ -105,7 +105,7 @@ export default function ImageUploadForm({
         throw new Error(responseData.message || 'Upload failed')
       }
 
-      const { url: blobUrl, filename: uniqueFilename } = responseData
+      const { publicUrl: blobUrl, filename: uniqueFilename } = responseData
       setUploadProgress(80)
 
       // Step 2: Save image metadata to database

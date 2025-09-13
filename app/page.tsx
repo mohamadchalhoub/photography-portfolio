@@ -855,7 +855,7 @@ export default function PhotographerPortfolio() {
           throw new Error(responseData.message || 'Upload failed')
         }
 
-        const { url: blobUrl, filename: uniqueFilename } = responseData
+        const { publicUrl: blobUrl, filename: uniqueFilename } = responseData
 
         // Step 3: Save image metadata
         const saveResponse = await fetch('/api/save-image', {

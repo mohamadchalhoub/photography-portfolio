@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { handleUpload } from '@vercel/blob/client'
+import { put } from '@vercel/blob'
+
+// Disable Next.js body parsing for this route
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
 
 // Maximum file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
 
 // Helper function to create consistent error responses
 function createErrorResponse(message: string, status: number = 500) {
+  console.error('❌ API Error:', message, 'Status:', status)
   return NextResponse.json(
     { 
       success: false, 
-      message,
+      error: message,
       timestamp: new Date().toISOString()
     },
     { status }
@@ -19,6 +27,7 @@ function createErrorResponse(message: string, status: number = 500) {
 
 // Helper function to create success responses
 function createSuccessResponse(data: any) {
+  console.log('✅ API Success:', data)
   return NextResponse.json({
     success: true,
     ...data,
@@ -27,7 +36,7 @@ function createSuccessResponse(data: any) {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('=== Upload Handler Started ===')
+  console.log('=== Upload URL Generation Started ===')
   
   try {
     // Step 1: Authentication check
@@ -55,34 +64,73 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Environment variables validated - token length:', blobToken.length)
 
-    // Step 3: Handle upload using Vercel Blob client
-    console.log('Step 3: Processing upload with Vercel Blob...')
+    // Step 3: Parse form data
+    console.log('Step 3: Parsing form data...')
+    let formData: FormData
     
     try {
-      const jsonResponse = await handleUpload({
+      formData = await request.formData()
+      console.log('✅ Form data parsed successfully')
+    } catch (parseError) {
+      console.error('❌ Form data parse error:', parseError)
+      return createErrorResponse('Invalid form data. Expected multipart/form-data.', 400)
+    }
+
+    // Step 4: Get file from form data
+    const file = formData.get('file') as File
+    if (!file) {
+      console.log('❌ No file found in form data')
+      return createErrorResponse('No file provided. Please select a file to upload.', 400)
+    }
+
+    console.log('✅ File found:', file.name, 'Size:', file.size, 'Type:', file.type)
+
+    // Step 5: Validate file
+    if (file.size > MAX_FILE_SIZE) {
+      console.log('❌ File too large:', file.size, 'Max allowed:', MAX_FILE_SIZE)
+      return createErrorResponse(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`, 400)
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      console.log('❌ Invalid file type:', file.type)
+      return createErrorResponse(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`, 400)
+    }
+
+    console.log('✅ File validation passed')
+
+    // Step 6: Generate unique filename
+    console.log('Step 4: Generating unique filename...')
+    const timestamp = Date.now()
+    const randomString = Math.random().toString(36).substring(2, 15)
+    const fileExtension = file.name.split('.').pop() || 'jpg'
+    const uniqueFileName = `photo_${timestamp}_${randomString}.${fileExtension}`
+    
+    console.log('✅ Generated unique filename:', uniqueFileName)
+
+    // Step 7: Upload file to Vercel Blob
+    console.log('Step 5: Uploading file to Vercel Blob...')
+    
+    try {
+      const blob = await put(uniqueFileName, file, {
+        access: 'public',
         token: blobToken,
-        request,
-        onBeforeGenerateToken: async (pathname, clientPayload) => {
-          console.log('Generating token for:', pathname)
-          return {
-            allowedContentTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
-            maximumSizeInBytes: MAX_FILE_SIZE,
-            addRandomSuffix: true,
-          }
-        },
-        onUploadCompleted: async ({ blob, token }) => {
-          console.log('Upload completed:', blob.url)
-          return {
-            url: blob.url,
-            filename: blob.pathname,
-            size: blob.size,
-            type: blob.contentType
-          }
-        },
       })
 
-      console.log('✅ Upload processed successfully')
-      return NextResponse.json(jsonResponse)
+      console.log('✅ File uploaded successfully')
+      console.log('Blob URL:', blob.url)
+
+      // Generate the handleUploadUrl for client-side upload
+      const handleUploadUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/upload-url`
+
+      return createSuccessResponse({
+        handleUploadUrl,
+        publicUrl: blob.url,
+        filename: uniqueFileName,
+        originalFilename: file.name,
+        size: file.size,
+        type: file.type
+      })
 
     } catch (blobError) {
       console.error('❌ Vercel Blob upload error:', blobError)
@@ -104,7 +152,7 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      return createErrorResponse('Failed to process upload', 500)
+      return createErrorResponse('Failed to upload file to storage', 500)
     }
 
   } catch (error) {
@@ -117,6 +165,6 @@ export async function POST(request: NextRequest) {
     
     return createErrorResponse('Internal server error during upload processing', 500)
   } finally {
-    console.log('=== Upload Handler Completed ===')
+    console.log('=== Upload URL Generation Completed ===')
   }
 }
