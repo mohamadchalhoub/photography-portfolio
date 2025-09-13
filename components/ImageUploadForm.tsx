@@ -120,7 +120,7 @@ export default function ImageUploadForm({
         throw new Error(responseData.error || 'Failed to get upload URL')
       }
 
-      const { uploadUrl, publicUrl, filename: uniqueFilename } = responseData
+      const { url: uploadUrl, filename: uniqueFilename } = responseData
       setUploadProgress(30)
 
       // Step 2: Upload file directly to Vercel Blob using PUT request
@@ -146,7 +146,7 @@ export default function ImageUploadForm({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uploadUrl: publicUrl,
+          uploadUrl: uploadUrl,
           filename: uniqueFilename,
           originalFilename: selectedFile.name,
           contentType: selectedFile.type,
