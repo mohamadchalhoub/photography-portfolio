@@ -13,14 +13,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { url, filename, originalFilename, contentType, size, albumId } = await request.json()
+    const { uploadUrl, pathname, filename, originalFilename, contentType, size, albumId } = await request.json()
 
-    if (!url || !filename) {
+    if (!uploadUrl || !filename) {
       return NextResponse.json(
-        { error: 'Missing required fields: url and filename' },
+        { error: 'Missing required fields: uploadUrl and filename' },
         { status: 400 }
       )
     }
+
+    // Create the public URL from the pathname
+    const publicUrl = `https://${process.env.BLOB_READ_WRITE_TOKEN?.split('.')[0]}.public.blob.vercel-storage.com${pathname}`
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,7 +36,7 @@ export async function POST(request: NextRequest) {
         .from('images')
         .insert({
           album_id: parseInt(albumId),
-          src: url,
+          src: publicUrl,
           alt: originalFilename || filename,
           title: (originalFilename || filename).split('.')[0], // Remove extension for title
           location: '',
@@ -62,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     // For general uploads (not album-specific)
     return NextResponse.json({
-      url,
+      url: publicUrl,
       filename: originalFilename || filename,
       size,
       type: contentType

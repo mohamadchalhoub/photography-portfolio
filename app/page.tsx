@@ -853,7 +853,7 @@ export default function PhotographerPortfolio() {
           throw new Error(errorData.error || 'Failed to get upload URL')
         }
 
-        const { url: uploadUrl, filename: uniqueFilename } = await uploadUrlResponse.json()
+        const { uploadUrl, pathname, filename: uniqueFilename } = await uploadUrlResponse.json()
 
         // Step 2: Upload directly to Vercel Blob Storage
         const uploadResponse = await fetch(uploadUrl, {
@@ -875,7 +875,8 @@ export default function PhotographerPortfolio() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            url: uploadUrl,
+            uploadUrl,
+            pathname,
             filename: uniqueFilename,
             originalFilename: file.name,
             contentType: file.type,

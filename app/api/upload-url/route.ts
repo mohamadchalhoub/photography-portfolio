@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
+import { createUploadUrl } from '@vercel/blob'
 import { verifyAuth } from '@/lib/auth'
 
 // Maximum file size: 10MB
@@ -43,15 +43,16 @@ export async function POST(request: NextRequest) {
     const fileExtension = filename.split('.').pop()
     const uniqueFileName = `photo_${timestamp}_${randomString}.${fileExtension}`
 
-    // Create a signed URL for direct upload to Vercel Blob
-    const blob = await put(uniqueFileName, new File([], filename, { type: contentType }), {
-      access: 'public',
+    // Create a signed upload URL for direct upload to Vercel Blob Storage
+    const { url: uploadUrl, pathname } = await createUploadUrl({
+      name: uniqueFileName,
+      maxSize: MAX_FILE_SIZE,
       token: process.env.BLOB_READ_WRITE_TOKEN,
-      addRandomSuffix: false,
     })
 
     return NextResponse.json({
-      url: blob.url,
+      uploadUrl,
+      pathname,
       filename: uniqueFileName,
       originalFilename: filename,
       contentType,
