@@ -835,62 +835,27 @@ export default function PhotographerPortfolio() {
           return
         }
 
-        // Step 1: Get upload URL and metadata from our API
-        const uploadUrlResponse = await fetch('/api/upload-url', {
+        // Step 1: Upload file directly to our API using FormData
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const uploadResponse = await fetch('/api/upload-url', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: file.name,
-          }),
-        })
-
-        if (!uploadUrlResponse.ok) {
-          const errorData = await uploadUrlResponse.json()
-          throw new Error(errorData.message || errorData.error || 'Failed to get upload URL')
-        }
-
-        const responseData = await uploadUrlResponse.json()
-        
-        if (!responseData.success) {
-          throw new Error(responseData.message || 'Failed to get upload URL')
-        }
-
-        const { handleUploadUrl, fileName: uniqueFilename } = responseData
-
-        // Step 2: Upload file directly to signed URL
-        const uploadResponse = await fetch(handleUploadUrl, {
-          method: 'PUT',
-          body: file,
-          headers: {
-            'Content-Type': file.type,
-          },
+          body: formData,
         })
 
         if (!uploadResponse.ok) {
-          throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`)
+          const errorData = await uploadResponse.json()
+          throw new Error(errorData.message || errorData.error || 'Upload failed')
         }
 
-        // Get the response URL from the upload
-        const responseText = await uploadResponse.text()
-        let blobUrl: string
+        const responseData = await uploadResponse.json()
         
-        try {
-          // Try to parse as JSON first
-          const responseData = JSON.parse(responseText)
-          blobUrl = responseData.url || responseData.blob?.url
-        } catch {
-          // If not JSON, the response might be the URL directly
-          blobUrl = responseText
+        if (!responseData.success) {
+          throw new Error(responseData.message || 'Upload failed')
         }
 
-        if (!blobUrl) {
-          // Fallback: construct the URL from the signed URL
-          const urlParts = handleUploadUrl.split('/')
-          const fileName = urlParts[urlParts.length - 1].split('?')[0]
-          blobUrl = `https://blob.vercel-storage.com/${fileName}`
-        }
+        const { url: blobUrl, filename: uniqueFilename } = responseData
 
         // Step 3: Save image metadata
         const saveResponse = await fetch('/api/save-image', {
