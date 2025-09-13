@@ -857,11 +857,20 @@ export default function PhotographerPortfolio() {
           throw new Error(responseData.error || 'Failed to get upload URL')
         }
 
-        const { handleUploadUrl, publicUrl: blobUrl, filename: uniqueFilename } = responseData
+        const { uploadUrl, publicUrl: blobUrl, filename: uniqueFilename } = responseData
 
-        // Step 2: Upload file directly to Vercel Blob using client-side upload
-        const { upload } = await import('@vercel/blob/client')
-        await upload({ handleUploadUrl, file })
+        // Step 2: Upload file directly to Vercel Blob using PUT request
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type
+          }
+        })
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`)
+        }
 
         // Step 3: Save image metadata
         const saveResponse = await fetch('/api/save-image', {

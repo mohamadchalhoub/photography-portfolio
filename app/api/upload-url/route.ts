@@ -125,26 +125,20 @@ export async function POST(request: NextRequest) {
     console.log('Step 5: Generating signed upload URL...')
     
     try {
-      // Create a signed URL for client-side upload
+      // Generate a signed URL for client-side upload
       const baseUrl = 'https://blob.vercel-storage.com'
-      const handleUploadUrl = `${baseUrl}/put/${uniqueFileName}?token=${blobToken}&access=public`
+      const signedUploadUrl = `${baseUrl}/put/${uniqueFileName}?token=${blobToken}&access=public`
       
       // The public URL will be available after upload
       const publicUrl = `${baseUrl}/${uniqueFileName}`
 
       console.log('✅ Signed upload URL generated successfully')
-      console.log('Handle Upload URL:', handleUploadUrl.substring(0, 100) + '...')
+      console.log('Upload URL:', signedUploadUrl.substring(0, 100) + '...')
       console.log('Public URL:', publicUrl)
 
       return createSuccessResponse({
-        url: publicUrl,
-        fields: {
-          key: uniqueFileName,
-          token: blobToken,
-          access: 'public'
-        },
-        handleUploadUrl,
-        publicUrl,
+        uploadUrl: signedUploadUrl, // This is the signed URL for PUT request
+        publicUrl: publicUrl, // This is the final public URL
         filename: uniqueFileName,
         originalFilename: name,
         size: size,
