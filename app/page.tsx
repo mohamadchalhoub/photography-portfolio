@@ -859,13 +859,20 @@ export default function PhotographerPortfolio() {
           throw new Error(responseData.message || 'Failed to get upload URL')
         }
 
-        const { uploadUrl, filename: uniqueFilename, token } = responseData
+        const { uploadUrl, filename: uniqueFilename } = responseData
 
         // Step 2: Upload file directly to Vercel Blob using client-side upload
         const { upload } = await import('@vercel/blob/client')
+        
+        // Check if token is available
+        const blobToken = process.env.NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN
+        if (!blobToken) {
+          throw new Error('Invalid or missing client token')
+        }
+        
         const blob = await upload(uniqueFilename, file, {
           access: 'public',
-          handleUploadUrl: '/api/upload-url',
+          token: blobToken,
         })
 
         // Step 3: Save image metadata

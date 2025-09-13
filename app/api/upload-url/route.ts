@@ -47,16 +47,16 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Check environment variables
     console.log('Step 2: Checking environment variables...')
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN
+    const blobToken = process.env.NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN
     
     if (!blobToken) {
-      console.error('❌ BLOB_READ_WRITE_TOKEN environment variable is not set')
-      return createErrorResponse('Server configuration error: BLOB_READ_WRITE_TOKEN not found', 500)
+      console.error('❌ NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN environment variable is not set')
+      return createErrorResponse('Server configuration error: NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN not found', 500)
     }
 
     if (blobToken.length < 10) {
-      console.error('❌ BLOB_READ_WRITE_TOKEN appears to be invalid (too short):', blobToken.length)
-      return createErrorResponse('Server configuration error: Invalid BLOB_READ_WRITE_TOKEN', 500)
+      console.error('❌ NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN appears to be invalid (too short):', blobToken.length)
+      return createErrorResponse('Server configuration error: Invalid NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN', 500)
     }
 
     console.log('✅ Environment variables validated - token length:', blobToken.length)
@@ -131,7 +131,6 @@ export async function POST(request: NextRequest) {
         filename: uniqueFileName,
         originalFilename: name,
         maxSize: MAX_FILE_SIZE,
-        token: blobToken, // This will be used by the client
         bucket: 'photos'
       })
 
