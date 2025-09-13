@@ -112,8 +112,24 @@ export default function ImageUploadForm({
       setUploadProgress(100)
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Upload failed')
+        // Try to parse JSON error response
+        let errorMessage = 'Upload failed'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch (parseError) {
+          // If JSON parsing fails, check status code for specific errors
+          if (response.status === 413) {
+            errorMessage = 'File too large. Please try a smaller image (under 10MB).'
+          } else if (response.status === 401) {
+            errorMessage = 'Unauthorized. Please log in as admin.'
+          } else if (response.status === 400) {
+            errorMessage = 'Invalid file. Please check file type and size.'
+          } else {
+            errorMessage = `Upload failed with status ${response.status}`
+          }
+        }
+        throw new Error(errorMessage)
       }
 
       const result = await response.json()

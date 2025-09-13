@@ -9,6 +9,10 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
 // Allowed image types
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
+// Configure runtime for larger files
+export const runtime = 'nodejs'
+export const maxDuration = 30
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication - only admins can upload
@@ -17,6 +21,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access required.' },
         { status: 401 }
+      )
+    }
+
+    // Check content length before parsing
+    const contentLength = request.headers.get('content-length')
+    if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: `File too large, must be under 10 MB. Request size: ${(parseInt(contentLength) / 1024 / 1024).toFixed(2)}MB` },
+        { status: 413 }
       )
     }
 
@@ -36,7 +49,7 @@ export async function POST(request: NextRequest) {
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: `File too large, must be under 10 MB. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB` },
-        { status: 400 }
+        { status: 413 }
       )
     }
 
@@ -54,12 +67,16 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.split('.').pop()
     const fileName = `photo_${timestamp}_${randomString}.${fileExtension}`
 
+    console.log(`Uploading file: ${fileName}, size: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
+
     // Upload to Vercel Blob Storage
     const blob = await put(fileName, file, {
       access: 'public',
       token: process.env.BLOB_READ_WRITE_TOKEN,
       addRandomSuffix: false, // We're already generating unique filenames
     })
+
+    console.log(`Upload successful: ${blob.url}`)
 
     // Use the blob URL for database storage
     const fileUrl = blob.url
@@ -112,8 +129,24 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Upload error:', error)
     
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message.includes('413') || error.message.includes('Payload Too Large')) {
+        return NextResponse.json(
+          { error: 'File too large. Please try a smaller image (under 10MB).' },
+          { status: 413 }
+        )
+      }
+      if (error.message.includes('timeout')) {
+        return NextResponse.json(
+          { error: 'Upload timeout. Please try again with a smaller file.' },
+          { status: 408 }
+        )
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to upload file' },
+      { error: 'Failed to upload file. Please try again.' },
       { status: 500 }
     )
   }
