@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, LogOut, Globe, Loader2 } from "lucide-react"
+import { Shield, LogOut, Globe, Loader2, Upload, Image as ImageIcon } from "lucide-react"
+import ImageUploadForm from "@/components/ImageUploadForm"
 
 export default function AdminPage() {
   const router = useRouter()
@@ -13,6 +14,7 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [loginForm, setLoginForm] = useState({ username: "", password: "" })
   const [loginError, setLoginError] = useState("")
+  const [uploadedImages, setUploadedImages] = useState<any[]>([])
 
   // Check authentication on page load
   useEffect(() => {
@@ -137,6 +139,16 @@ export default function AdminPage() {
     )
   }
 
+  // Handle successful upload
+  const handleUploadSuccess = (response: any) => {
+    setUploadedImages(prev => [response, ...prev])
+  }
+
+  // Handle upload error
+  const handleUploadError = (error: string) => {
+    console.error('Upload error:', error)
+  }
+
   // Simple authenticated state - just redirect to main page with admin access
   return (
     <div className="min-h-screen bg-stone-900 text-stone-100">
@@ -169,17 +181,112 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Upload Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div>
+            <ImageUploadForm 
+              onUploadSuccess={handleUploadSuccess}
+              onUploadError={handleUploadError}
+            />
+          </div>
+          
+          {/* Upload Instructions */}
+          <Card className="bg-stone-800 border-stone-700">
+            <CardHeader>
+              <CardTitle className="text-stone-100 flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Upload Instructions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="text-stone-200 font-medium">File Requirements:</h4>
+                <ul className="text-stone-400 text-sm space-y-1 ml-4">
+                  <li>• Maximum file size: 10MB</li>
+                  <li>• Supported formats: JPEG, PNG, WebP</li>
+                  <li>• Images are stored in Vercel Blob Storage</li>
+                </ul>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-stone-200 font-medium">How to use:</h4>
+                <ol className="text-stone-400 text-sm space-y-1 ml-4 list-decimal">
+                  <li>Select an image file using the file input</li>
+                  <li>Click "Upload Image" to start the upload</li>
+                  <li>Wait for the upload to complete</li>
+                  <li>The image URL will be returned for use</li>
+                </ol>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-stone-200 font-medium">API Usage:</h4>
+                <div className="bg-stone-700 rounded p-3 text-xs font-mono text-stone-300">
+                  <div>POST /api/upload</div>
+                  <div>Content-Type: multipart/form-data</div>
+                  <div>Body: file (image file)</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recently Uploaded Images */}
+        {uploadedImages.length > 0 && (
+          <Card className="bg-stone-800 border-stone-700">
+            <CardHeader>
+              <CardTitle className="text-stone-100 flex items-center gap-2">
+                <ImageIcon className="h-5 w-5" />
+                Recently Uploaded Images
+              </CardTitle>
+              <CardDescription className="text-stone-400">
+                Your recently uploaded images and their URLs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {uploadedImages.map((image, index) => (
+                  <div key={index} className="bg-stone-700 rounded-lg p-4 border border-stone-600">
+                    <div className="space-y-2">
+                      <div className="aspect-video bg-stone-600 rounded flex items-center justify-center">
+                        <img 
+                          src={image.url || image.src} 
+                          alt={image.alt || image.filename}
+                          className="max-w-full max-h-full object-contain rounded"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-stone-200 text-sm font-medium truncate">
+                          {image.filename || image.alt}
+                        </p>
+                        <p className="text-stone-400 text-xs">
+                          {image.size ? `${(image.size / 1024 / 1024).toFixed(2)} MB` : ''}
+                        </p>
+                        <div className="bg-stone-600 rounded p-2">
+                          <p className="text-stone-300 text-xs break-all">
+                            {image.url || image.src}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* General Admin Info */}
         <Card className="bg-stone-800 border-stone-700">
           <CardHeader>
-            <CardTitle className="text-stone-100">Welcome to Admin Dashboard</CardTitle>
+            <CardTitle className="text-stone-100">Admin Dashboard</CardTitle>
             <CardDescription className="text-stone-400">
-              Access your website's admin features by scrolling down on the main page
+              Manage your photography portfolio
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-stone-300 mb-4">
-              The admin dashboard is integrated into the main website. Go back to the homepage and scroll down to access the settings button for full admin functionality.
+              Use the upload form above to add new images to your portfolio. All images are automatically stored in Vercel Blob Storage and can be used throughout your website.
             </p>
             <Button
               onClick={() => router.push('/')}
