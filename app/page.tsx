@@ -857,20 +857,14 @@ export default function PhotographerPortfolio() {
           throw new Error(responseData.error || 'Failed to get upload URL')
         }
 
-        const { url: uploadUrl, filename: uniqueFilename } = responseData
+        const { filename: uniqueFilename, token } = responseData
 
-        // Step 2: Upload file directly to Vercel Blob using PUT request
-        const uploadResponse = await fetch(uploadUrl, {
-          method: 'PUT',
-          body: file,
-          headers: {
-            'Content-Type': file.type
-          }
+        // Step 2: Upload file directly to Vercel Blob using the client
+        const { put } = await import('@vercel/blob')
+        const blob = await put(uniqueFilename, file, {
+          access: 'public',
+          token: token,
         })
-
-        if (!uploadResponse.ok) {
-          throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`)
-        }
 
         // Step 3: Save image metadata
         const saveResponse = await fetch('/api/save-image', {
@@ -879,7 +873,7 @@ export default function PhotographerPortfolio() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            uploadUrl: uploadUrl,
+            uploadUrl: blob.url,
             filename: uniqueFilename,
             originalFilename: file.name,
             contentType: file.type,
@@ -896,7 +890,7 @@ export default function PhotographerPortfolio() {
         const uploadResult = await saveResponse.json()
 
         if (field === 'coverImage') {
-          setEditingAlbum(prev => prev ? { ...prev, coverImage: uploadUrl } : null)
+          setEditingAlbum(prev => prev ? { ...prev, coverImage: blob.url } : null)
         } else if (field === 'newPhoto') {
           if (!isCreatingNewAlbum && editingAlbum.id) {
             // Album exists in database - image is already saved to database

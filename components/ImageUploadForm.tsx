@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Upload, X, CheckCircle, AlertCircle, Image as ImageIcon } from "lucide-react"
+import { put } from '@vercel/blob'
 
 interface UploadResponse {
   url: string
@@ -120,22 +121,15 @@ export default function ImageUploadForm({
         throw new Error(responseData.error || 'Failed to get upload URL')
       }
 
-      const { url: uploadUrl, filename: uniqueFilename } = responseData
+      const { filename: uniqueFilename, token } = responseData
       setUploadProgress(30)
 
-      // Step 2: Upload file directly to Vercel Blob using PUT request
+      // Step 2: Upload file directly to Vercel Blob using the client
       setUploadProgress(50)
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: selectedFile,
-        headers: {
-          'Content-Type': selectedFile.type
-        }
+      const blob = await put(uniqueFilename, selectedFile, {
+        access: 'public',
+        token: token,
       })
-
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`)
-      }
 
       setUploadProgress(80)
 
@@ -146,7 +140,7 @@ export default function ImageUploadForm({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uploadUrl: uploadUrl,
+          uploadUrl: blob.url,
           filename: uniqueFilename,
           originalFilename: selectedFile.name,
           contentType: selectedFile.type,

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { put } from '@vercel/blob'
 
 // Enable JSON body parsing for this route
 export const config = {
@@ -126,44 +125,32 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ Generated unique filename:', uniqueFileName)
 
-    // Step 7: Generate signed upload URL for client-side upload
-    console.log('Step 5: Generating signed upload URL...')
+    // Step 7: Return upload metadata for client-side upload
+    console.log('Step 5: Preparing upload metadata...')
     
     try {
-      // Generate a signed URL for client-side upload
-      // Create the signed URL manually using the Vercel Blob format
-      const baseUrl = 'https://blob.vercel-storage.com'
-      const signedUploadUrl = `${baseUrl}/put/${uniqueFileName}?token=${blobToken}&access=public`
-      
-      // The public URL will be available after upload
-      const publicUrl = `${baseUrl}/${uniqueFileName}`
-
-      console.log('✅ Signed upload URL generated successfully')
-      console.log('Upload URL:', signedUploadUrl.substring(0, 100) + '...')
-      console.log('Public URL:', publicUrl)
+      // Instead of generating a signed URL, we'll return the metadata
+      // and let the client use the Vercel Blob client directly
+      console.log('✅ Upload metadata prepared successfully')
 
       return createSuccessResponse({
-        url: signedUploadUrl, // This is the signed URL for PUT request
         filename: uniqueFileName,
         originalFilename: name,
         size: size,
-        type: type
+        type: type,
+        // Return the token for client-side upload
+        token: blobToken
       })
 
-    } catch (blobError) {
-      console.error('❌ Vercel Blob URL generation error:', blobError)
+    } catch (error) {
+      console.error('❌ Error preparing upload metadata:', error)
       
-      // Log detailed error information
-      if (blobError instanceof Error) {
-        console.error('Error message:', blobError.message)
-        console.error('Error stack:', blobError.stack)
+      if (error instanceof Error) {
+        console.error('Error message:', error.message)
+        console.error('Error stack:', error.stack)
       }
       
-      // Log token information for debugging (without exposing the full token)
-      console.error('Token length:', blobToken.length)
-      console.error('Token starts with:', blobToken.substring(0, 10))
-      
-      return createErrorResponse('Failed to generate upload URL: ' + (blobError instanceof Error ? blobError.message : 'Unknown error'), 500)
+      return createErrorResponse('Failed to prepare upload metadata: ' + (error instanceof Error ? error.message : 'Unknown error'), 500)
     }
 
   } catch (error) {
