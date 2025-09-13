@@ -848,10 +848,16 @@ export default function PhotographerPortfolio() {
 
         if (!uploadUrlResponse.ok) {
           const errorData = await uploadUrlResponse.json()
-          throw new Error(errorData.error || 'Failed to generate upload URL')
+          throw new Error(errorData.message || errorData.error || 'Failed to generate upload URL')
         }
 
-        const { uploadUrl, filename: uniqueFilename } = await uploadUrlResponse.json()
+        const responseData = await uploadUrlResponse.json()
+        
+        if (!responseData.success) {
+          throw new Error(responseData.message || 'Failed to generate upload URL')
+        }
+
+        const { uploadUrl, filename: uniqueFilename } = responseData
 
         // Step 2: Upload directly to Vercel Blob Storage
         const uploadResponse = await fetch(uploadUrl, {
