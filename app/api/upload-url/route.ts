@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { put } from '@vercel/blob'
 
-// Disable Next.js body parsing for this route
+// Enable JSON body parsing for this route
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: '1mb', // Only for metadata, not file data
+    },
   },
 }
 
@@ -135,6 +137,12 @@ export async function POST(request: NextRequest) {
       console.log('Public URL:', publicUrl)
 
       return createSuccessResponse({
+        url: publicUrl,
+        fields: {
+          key: uniqueFileName,
+          token: blobToken,
+          access: 'public'
+        },
         handleUploadUrl,
         publicUrl,
         filename: uniqueFileName,
