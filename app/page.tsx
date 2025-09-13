@@ -835,27 +835,33 @@ export default function PhotographerPortfolio() {
           return
         }
 
-        // Step 1: Upload file directly to our API using FormData
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const uploadResponse = await fetch('/api/upload-url', {
+        // Step 1: Get signed upload URL from our API (metadata only)
+        const uploadUrlResponse = await fetch('/api/upload-url', {
           method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: file.name, 
+            size: file.size, 
+            type: file.type 
+          }),
         })
 
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json()
-          throw new Error(errorData.message || errorData.error || 'Upload failed')
+        if (!uploadUrlResponse.ok) {
+          const errorData = await uploadUrlResponse.json()
+          throw new Error(errorData.error || 'Failed to get upload URL')
         }
 
-        const responseData = await uploadResponse.json()
+        const responseData = await uploadUrlResponse.json()
         
         if (!responseData.success) {
-          throw new Error(responseData.message || 'Upload failed')
+          throw new Error(responseData.error || 'Failed to get upload URL')
         }
 
-        const { publicUrl: blobUrl, filename: uniqueFilename } = responseData
+        const { handleUploadUrl, publicUrl: blobUrl, filename: uniqueFilename } = responseData
+
+        // Step 2: Upload file directly to Vercel Blob using client-side upload
+        const { upload } = await import('@vercel/blob/client')
+        await upload({ handleUploadUrl, file })
 
         // Step 3: Save image metadata
         const saveResponse = await fetch('/api/save-image', {

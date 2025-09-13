@@ -64,36 +64,47 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Environment variables validated - token length:', blobToken.length)
 
-    // Step 3: Parse form data
-    console.log('Step 3: Parsing form data...')
-    let formData: FormData
+    // Step 3: Parse JSON metadata (not file data)
+    console.log('Step 3: Parsing JSON metadata...')
+    let requestBody: { name?: string; size?: number; type?: string }
     
     try {
-      formData = await request.formData()
-      console.log('✅ Form data parsed successfully')
+      requestBody = await request.json()
+      console.log('✅ JSON metadata parsed successfully:', requestBody)
     } catch (parseError) {
-      console.error('❌ Form data parse error:', parseError)
-      return createErrorResponse('Invalid form data. Expected multipart/form-data.', 400)
+      console.error('❌ JSON parse error:', parseError)
+      return createErrorResponse('Invalid JSON in request body. Expected: { "name": "filename.jpg", "size": 1234567, "type": "image/jpeg" }', 400)
     }
 
-    // Step 4: Get file from form data
-    const file = formData.get('file') as File
-    if (!file) {
-      console.log('❌ No file found in form data')
-      return createErrorResponse('No file provided. Please select a file to upload.', 400)
+    // Step 4: Validate metadata
+    const { name, size, type } = requestBody
+    
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      console.log('❌ Invalid filename:', name)
+      return createErrorResponse('Missing or invalid filename. Expected a non-empty string.', 400)
     }
 
-    console.log('✅ File found:', file.name, 'Size:', file.size, 'Type:', file.type)
+    if (!size || typeof size !== 'number' || size <= 0) {
+      console.log('❌ Invalid file size:', size)
+      return createErrorResponse('Missing or invalid file size. Expected a positive number.', 400)
+    }
 
-    // Step 5: Validate file
-    if (file.size > MAX_FILE_SIZE) {
-      console.log('❌ File too large:', file.size, 'Max allowed:', MAX_FILE_SIZE)
+    if (!type || typeof type !== 'string' || type.trim() === '') {
+      console.log('❌ Invalid file type:', type)
+      return createErrorResponse('Missing or invalid file type. Expected a MIME type string.', 400)
+    }
+
+    console.log('✅ Metadata validation passed:', { name, size, type })
+
+    // Step 5: Validate file size and type
+    if (size > MAX_FILE_SIZE) {
+      console.log('❌ File too large:', size, 'Max allowed:', MAX_FILE_SIZE)
       return createErrorResponse(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`, 400)
     }
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
-      console.log('❌ Invalid file type:', file.type)
+    if (!allowedTypes.includes(type)) {
+      console.log('❌ Invalid file type:', type)
       return createErrorResponse(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`, 400)
     }
 
@@ -103,37 +114,37 @@ export async function POST(request: NextRequest) {
     console.log('Step 4: Generating unique filename...')
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(2, 15)
-    const fileExtension = file.name.split('.').pop() || 'jpg'
+    const fileExtension = name.split('.').pop() || 'jpg'
     const uniqueFileName = `photo_${timestamp}_${randomString}.${fileExtension}`
     
     console.log('✅ Generated unique filename:', uniqueFileName)
 
-    // Step 7: Upload file to Vercel Blob
-    console.log('Step 5: Uploading file to Vercel Blob...')
+    // Step 7: Generate signed upload URL for client-side upload
+    console.log('Step 5: Generating signed upload URL...')
     
     try {
-      const blob = await put(uniqueFileName, file, {
-        access: 'public',
-        token: blobToken,
-      })
+      // Create a signed URL for client-side upload
+      const baseUrl = 'https://blob.vercel-storage.com'
+      const handleUploadUrl = `${baseUrl}/put/${uniqueFileName}?token=${blobToken}&access=public`
+      
+      // The public URL will be available after upload
+      const publicUrl = `${baseUrl}/${uniqueFileName}`
 
-      console.log('✅ File uploaded successfully')
-      console.log('Blob URL:', blob.url)
-
-      // Generate the handleUploadUrl for client-side upload
-      const handleUploadUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/upload-url`
+      console.log('✅ Signed upload URL generated successfully')
+      console.log('Handle Upload URL:', handleUploadUrl.substring(0, 100) + '...')
+      console.log('Public URL:', publicUrl)
 
       return createSuccessResponse({
         handleUploadUrl,
-        publicUrl: blob.url,
+        publicUrl,
         filename: uniqueFileName,
-        originalFilename: file.name,
-        size: file.size,
-        type: file.type
+        originalFilename: name,
+        size: size,
+        type: type
       })
 
     } catch (blobError) {
-      console.error('❌ Vercel Blob upload error:', blobError)
+      console.error('❌ Vercel Blob URL generation error:', blobError)
       
       // Log detailed error information
       if (blobError instanceof Error) {
@@ -141,29 +152,18 @@ export async function POST(request: NextRequest) {
         console.error('Error stack:', blobError.stack)
       }
       
-      // Handle specific error types
-      if (blobError instanceof Error) {
-        if (blobError.message.includes('403')) {
-          return createErrorResponse('Access denied. Please check your BLOB_READ_WRITE_TOKEN.', 403)
-        } else if (blobError.message.includes('413')) {
-          return createErrorResponse('File too large. Maximum size is 10MB.', 413)
-        } else if (blobError.message.includes('400')) {
-          return createErrorResponse('Invalid file type. Only JPEG, PNG, and WebP are allowed.', 400)
-        }
-      }
-      
-      return createErrorResponse('Failed to upload file to storage', 500)
+      return createErrorResponse('Failed to generate upload URL', 500)
     }
 
   } catch (error) {
-    console.error('❌ Unexpected error in upload processing:', error)
+    console.error('❌ Unexpected error in upload URL generation:', error)
     
     if (error instanceof Error) {
       console.error('Error message:', error.message)
       console.error('Error stack:', error.stack)
     }
     
-    return createErrorResponse('Internal server error during upload processing', 500)
+    return createErrorResponse('Internal server error during upload URL generation', 500)
   } finally {
     console.log('=== Upload URL Generation Completed ===')
   }
